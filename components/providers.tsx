@@ -6,7 +6,9 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { SidebarProvider, SidebarInset, Sidebar } from "@/components/ui/sidebar";
 import AppSidebar from "@/components/layout/AppSidebar";
+import MobileTopBar from "@/components/layout/MobileTopBar";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 // Create a client
 const queryClient = new QueryClient();
@@ -30,7 +32,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
 // AuthenticatedLayout conditionally renders the sidebar based on authentication status
 function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, userRole } = useAuth();
+  const isMobile = useIsMobile();
 
   // Always render children - either directly or within the sidebar layout
   // This ensures consistent hook rendering
@@ -41,6 +44,7 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
   // If authenticated, render the sidebar layout
   return (
     <SidebarProvider>
+      {isMobile && <MobileTopBar userRole={userRole === 'student' || userRole === 'teacher' ? userRole : undefined} />}
       <div className="min-h-screen flex w-full">
         <Sidebar>
           <AppSidebar />

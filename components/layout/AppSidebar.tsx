@@ -9,6 +9,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { useSidebar } from '@/components/ui/sidebar';
 import { useAuth } from '@/hooks/use-auth';
+import { useIsMobile } from '@/hooks/use-mobile';
 import {
   BookOpenText,
   GraduationCap,
@@ -35,6 +36,7 @@ const AppSidebar = ({ userRole: propUserRole }: AppSidebarProps) => {
   const isCollapsed = state === 'collapsed';
   const pathname = usePathname();
   const { userRole: authUserRole, logout } = useAuth();
+  const isMobile = useIsMobile();
   
   // Use the provided role from props, or fall back to the authenticated user role
   const userRole = propUserRole || authUserRole || 'student';
@@ -72,9 +74,9 @@ const AppSidebar = ({ userRole: propUserRole }: AppSidebarProps) => {
       {/* Header */}
       <div className={cn(
         "px-4 py-4 flex items-center",
-        isCollapsed ? "justify-center" : "justify-between"
+        isCollapsed && !isMobile ? "justify-center" : "justify-between"
       )}>
-        {!isCollapsed && (
+        {(!isCollapsed || isMobile) && (
           <div className="flex items-center gap-2">
             {userRole === 'student' ? 
               <GraduationCap className="h-6 w-6 text-primary" /> : 
@@ -89,7 +91,7 @@ const AppSidebar = ({ userRole: propUserRole }: AppSidebarProps) => {
           onClick={toggleSidebar}
           className="h-8 w-8"
         >
-          {isCollapsed ? <Menu className="h-5 w-5" /> : <X className="h-5 w-5" />}
+          {isCollapsed && !isMobile ? <Menu className="h-5 w-5" /> : <X className="h-5 w-5" />}
         </Button>
       </div>
       
@@ -111,14 +113,15 @@ const AppSidebar = ({ userRole: propUserRole }: AppSidebarProps) => {
                 href={link.path}
                 className={cn(
                   "flex items-center py-2.5 rounded-md text-sm font-medium transition-colors",
-                  isCollapsed ? "justify-center px-2" : "px-3",
+                  // On mobile, always show text even when collapsed
+                  isCollapsed && !isMobile ? "justify-center px-2" : "px-3",
                   pathname === link.path
                     ? "bg-primary text-primary-foreground hover:bg-primary/90"
                     : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                 )}
               >
                 {link.icon}
-                {!isCollapsed && <span className="ml-3">{link.name}</span>}
+                {(!isCollapsed || isMobile) && <span className="ml-3">{link.name}</span>}
               </Link>
             ))}
           </nav>
@@ -130,9 +133,9 @@ const AppSidebar = ({ userRole: propUserRole }: AppSidebarProps) => {
       {/* User Profile */}
       <div className={cn(
         "p-4 flex items-center",
-        isCollapsed ? "justify-center" : ""
+        isCollapsed && !isMobile ? "justify-center" : ""
       )}>
-        {isCollapsed ? (
+        {isCollapsed && !isMobile ? (
           <div className="flex flex-col gap-3 items-center">
             <Button variant="outline" size="icon" asChild className="rounded-full w-9 h-9 p-0">
               <Link href="/profile">

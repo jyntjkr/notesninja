@@ -3,7 +3,7 @@
 import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
 import { VariantProps, cva } from "class-variance-authority"
-import { PanelLeftIcon } from "lucide-react"
+import { PanelLeftIcon, Menu } from "lucide-react"
 
 import { useIsMobile } from "@/hooks/use-mobile"
 import { cn } from "@/lib/utils"
@@ -83,8 +83,12 @@ function SidebarProvider({
 
   // Helper to toggle the sidebar.
   const toggleSidebar = React.useCallback(() => {
-    return isMobile ? setOpenMobile((open) => !open) : setOpen((open) => !open)
-  }, [isMobile, setOpen, setOpenMobile])
+    if (isMobile) {
+      setOpenMobile(!openMobile);
+    } else {
+      setOpen(!open);
+    }
+  }, [isMobile, setOpen, open, openMobile, setOpenMobile]);
 
   // Adds a keyboard shortcut to toggle the sidebar.
   React.useEffect(() => {
@@ -122,6 +126,13 @@ function SidebarProvider({
   return (
     <SidebarContext.Provider value={contextValue}>
       <TooltipProvider delayDuration={0}>
+        {isMobile && openMobile && (
+          <div 
+            className="fixed inset-0 bg-black/50 z-40"
+            onClick={toggleSidebar}
+            aria-hidden="true"
+          />
+        )}
         <div
           data-slot="sidebar-wrapper"
           style={
@@ -155,24 +166,48 @@ function Sidebar({
   variant?: "sidebar" | "floating" | "inset"
   collapsible?: "offcanvas" | "icon" | "none"
 }) {
-  const { state } = useSidebar();
+  const { state, isMobile, openMobile, toggleSidebar } = useSidebar();
+  
+  // On mobile, always use expanded width when visible, otherwise use normal desktop state
+  const effectiveState = isMobile ? (openMobile ? "expanded" : "collapsed") : state;
+  
+  // For mobile, we create a slide-in drawer effect
+  const sidebarStyles = isMobile 
+    ? openMobile 
+      ? "w-[80%] max-w-[300px] translate-x-0 shadow-xl" 
+      : "w-[80%] max-w-[300px] -translate-x-full border-r-0" 
+    : (effectiveState === "expanded" ? "w-[16rem]" : "w-[4rem]");
 
   return (
-    <div
-      data-slot="sidebar"
-      data-state={state}
-      data-variant={variant}
-      data-collapsible={collapsible}
-      className={cn(
-        "fixed left-0 top-0 z-50 h-screen bg-background border-r border-border transition-all duration-300",
-        state === "expanded" ? "w-[16rem]" : "w-[4rem]",
-        "overflow-hidden",
-        className
+    <>
+      {/* Backdrop overlay for mobile */}
+      {isMobile && openMobile && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 top-14 cursor-pointer"
+          onClick={toggleSidebar}
+          aria-hidden="true"
+          role="button"
+          tabIndex={-1}
+        />
       )}
-      {...props}
-    >
-      {children}
-    </div>
+      <div
+        data-slot="sidebar"
+        data-state={effectiveState}
+        data-variant={variant}
+        data-collapsible={collapsible}
+        data-mobile={isMobile ? "true" : "false"}
+        className={cn(
+          "fixed left-0 z-50 bg-background border-r border-border transition-all duration-300",
+          isMobile ? "top-14 h-[calc(100vh-3.5rem)]" : "top-0 h-screen", 
+          sidebarStyles,
+          "overflow-hidden",
+          className
+        )}
+        {...props}
+      >
+        {children}
+      </div>
+    </>
   );
 }
 
@@ -202,6 +237,35 @@ function SidebarTrigger({
   )
 }
 
+// Floating mobile toggle button that appears when sidebar is collapsed on mobile
+function SidebarMobileToggle({
+  className,
+  ...props
+}: React.ComponentProps<typeof Button>) {
+  const { toggleSidebar, isMobile, openMobile } = useSidebar()
+
+  // Only show when on mobile, sidebar is collapsed, and it's hidden off-screen
+  // This prevents showing the toggle button when the sidebar is already partially visible
+  if (!isMobile || openMobile) return null;
+
+  return (
+    <Button
+      data-sidebar="mobile-toggle"
+      variant="secondary"
+      size="sm"
+      className={cn(
+        "fixed left-4 top-4 z-[100] rounded-lg shadow-md bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-2 px-3",
+        className
+      )}
+      onClick={toggleSidebar}
+      {...props}
+    >
+      <Menu className="h-4 w-4" />
+      <span>Menu</span>
+    </Button>
+  )
+}
+
 function SidebarRail({ className, ...props }: React.ComponentProps<"button">) {
   const { toggleSidebar } = useSidebar()
 
@@ -227,12 +291,14 @@ function SidebarRail({ className, ...props }: React.ComponentProps<"button">) {
 }
 
 function SidebarInset({ className, ...props }: React.ComponentProps<"main">) {
-  const { state } = useSidebar();
+  const { state, isMobile } = useSidebar();
+  
   return (
     <main
       className={cn(
         "flex-1 transition-all duration-300 p-6",
-        state === "expanded" ? "ml-[16rem]" : "ml-[4rem]",
+        isMobile ? "pt-[4.5rem] ml-0" : // Increase top padding on mobile for more space below navbar
+        (state === "expanded" ? "ml-[16rem]" : "ml-[4rem]"), // On desktop, adjust margin based on sidebar state
         className
       )}
       {...props}
@@ -644,5 +710,6 @@ export {
   SidebarRail,
   SidebarSeparator,
   SidebarTrigger,
+  SidebarMobileToggle,
   useSidebar,
 }
