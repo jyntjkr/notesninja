@@ -24,19 +24,19 @@ const TeacherTests = () => {
   const [shareUrl, setShareUrl] = useState('https://smartnote.companion/test/2438abcd');
 
   // Authentication check
-  const { isAuthenticated, userRole } = useAuth();
+  const { isAuthenticated, isTeacher } = useAuth();
   const router = useRouter();
 
   React.useEffect(() => {
     if (!isAuthenticated) {
       router.push('/auth');
-    } else if (userRole !== 'teacher') {
-      router.push(`/${userRole}/dashboard`);
+    } else if (!isTeacher) {
+      router.push('/student/dashboard');
     }
-  }, [isAuthenticated, userRole, router]);
+  }, [isAuthenticated, isTeacher, router]);
 
   // Don't render until authenticated
-  if (!isAuthenticated || userRole !== 'teacher') {
+  if (!isAuthenticated || !isTeacher) {
     return null;
   }
 

@@ -17,19 +17,19 @@ const StudentNotes = () => {
   const [searchQuery, setSearchQuery] = useState('');
   
   // Authentication check
-  const { isAuthenticated, userRole } = useAuth();
+  const { isAuthenticated, isStudent } = useAuth();
   const router = useRouter();
 
   React.useEffect(() => {
     if (!isAuthenticated) {
       router.push('/auth');
-    } else if (userRole !== 'student') {
-      router.push(`/${userRole}/dashboard`);
+    } else if (!isStudent) {
+      router.push('/teacher/dashboard');
     }
-  }, [isAuthenticated, userRole, router]);
+  }, [isAuthenticated, isStudent, router]);
 
   // Don't render until authenticated
-  if (!isAuthenticated || userRole !== 'student') {
+  if (!isAuthenticated || !isStudent) {
     return null;
   }
 

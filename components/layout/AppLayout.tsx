@@ -13,11 +13,11 @@ interface AppLayoutProps {
 }
 
 const AppLayout = ({ children, userRole: propUserRole }: AppLayoutProps) => {
-  const { isAuthenticated, userRole: authUserRole } = useAuth();
+  const { isAuthenticated, isTeacher, isStudent } = useAuth();
   const router = useRouter();
   
   // Use the provided role from props, or fall back to the authenticated user role
-  const userRole = propUserRole || authUserRole;
+  const userRole = propUserRole || (isTeacher ? 'teacher' : 'student');
   
   // Redirect to auth page if not authenticated
   useEffect(() => {

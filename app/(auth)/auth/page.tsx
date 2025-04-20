@@ -1,139 +1,99 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
-import { useRouter } from "next/navigation";
-import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import { GraduationCap, Users, ArrowRight } from 'lucide-react';
-import { motion } from 'framer-motion';
-import { useAuth } from '@/hooks/use-auth';
+import { useEffect, useState, Suspense } from "react";
+import { signIn, useSession } from "next-auth/react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Icons } from "@/components/shared/icons";
 
-export default function AuthPage() {
-  const [selectedRole, setSelectedRole] = useState<'student' | 'teacher' | null>(null);
+function AuthContent() {
   const router = useRouter();
-  const { login, isAuthenticated, userRole } = useAuth();
+  const { data: session, status } = useSession();
+  const [isLoading, setIsLoading] = useState(false);
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get("callbackUrl") || "/";
+  const error = searchParams.get("error");
 
-  // If already authenticated, redirect to dashboard
   useEffect(() => {
-    if (isAuthenticated && userRole) {
-      router.push(`/${userRole}/dashboard`);
-    }
-  }, [isAuthenticated, userRole, router]);
-
-  const handleContinue = () => {
-    if (selectedRole) {
-      login(selectedRole);
-    }
-  };
-
-  const container = {
-    hidden: { opacity: 0 },
-    show: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1
+    if (status === "authenticated") {
+      // Check if user has confirmed role
+      if (session?.user?.roleConfirmed) {
+        // If role is confirmed, redirect to appropriate dashboard
+        const redirectPath = session.user.role?.toLowerCase() === "teacher" 
+          ? "/teacher/dashboard" 
+          : "/student/dashboard";
+        router.push(redirectPath);
+      } else {
+        // If role is not confirmed, redirect to role selection
+        router.push("/auth/role-select");
       }
     }
-  };
+  }, [session, status, router]);
 
-  const item = {
-    hidden: { opacity: 0, y: 20 },
-    show: { opacity: 1, y: 0 }
+  const handleGoogleSignIn = async () => {
+    setIsLoading(true);
+    try {
+      // Set flag to indicate authentication flow has started
+      // This helps track new sign ups vs returning users
+      localStorage.setItem('auth_flow_started', 'true');
+      
+      await signIn("google", { callbackUrl });
+    } catch (error) {
+      console.error("Sign in error:", error);
+    } finally {
+      setIsLoading(false);
+    }
   };
-
-  // Don't render the auth page if already authenticated
-  if (isAuthenticated) {
-    return null;
-  }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-50 p-4">
-      <motion.div
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.3 }}
-        className="max-w-md w-full"
-      >
-        <Card className="shadow-lg border-0">
-          <CardHeader className="space-y-1 text-center">
-            <motion.div
-              initial={{ y: -20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.1 }}
-            >
-              <CardTitle className="text-2xl font-bold tracking-tight">
-                Smart Note Companion
-              </CardTitle>
-              <CardDescription className="text-muted-foreground">
-                Choose your role to continue
-              </CardDescription>
-            </motion.div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <motion.div
-              variants={container}
-              initial="hidden"
-              animate="show"
-              className="grid grid-cols-1 gap-4"
-            >
-              <motion.div variants={item}>
-                <Card 
-                  className={`cursor-pointer hover-scale ${selectedRole === 'student' ? 'border-primary ring-1 ring-primary' : ''}`}
-                  onClick={() => setSelectedRole('student')}
-                >
-                  <CardContent className="p-6 flex items-center gap-4">
-                    <div className="bg-blue-100 p-3 rounded-full">
-                      <GraduationCap className="h-8 w-8 text-primary-blue" />
-                    </div>
-                    <div className="space-y-1">
-                      <h3 className="font-medium text-lg">Student</h3>
-                      <p className="text-sm text-muted-foreground">
-                        Upload notes, study with flashcards, and track your progress
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
+    <div className="flex items-center justify-center min-h-screen bg-gray-50">
+      <Card className="w-full max-w-md mx-4">
+        <CardHeader className="space-y-1 text-center">
+          <CardTitle className="text-2xl font-bold">Welcome to NoteNinja</CardTitle>
+          <CardDescription>
+            Sign in to access your notes, flashcards, and revision materials
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-4">
+          {error && (
+            <div className="bg-red-50 p-4 rounded-md mb-4 text-red-500 text-sm">
+              {error === "OAuthAccountNotLinked"
+                ? "Email already in use with a different provider."
+                : "Authentication error. Please try again."}
+            </div>
+          )}
 
-              <motion.div variants={item}>
-                <Card 
-                  className={`cursor-pointer hover-scale ${selectedRole === 'teacher' ? 'border-primary ring-1 ring-primary' : ''}`}
-                  onClick={() => setSelectedRole('teacher')}
-                >
-                  <CardContent className="p-6 flex items-center gap-4">
-                    <div className="bg-purple-100 p-3 rounded-full">
-                      <Users className="h-8 w-8 text-primary-purple" />
-                    </div>
-                    <div className="space-y-1">
-                      <h3 className="font-medium text-lg">Teacher</h3>
-                      <p className="text-sm text-muted-foreground">
-                        Upload materials and generate tests for your students
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            </motion.div>
-          </CardContent>
-          <CardFooter>
-            <Button 
-              className="w-full"
-              disabled={!selectedRole}
-              onClick={handleContinue}
-            >
-              Continue
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-          </CardFooter>
-        </Card>
-      </motion.div>
+          <Button
+            variant="outline"
+            onClick={handleGoogleSignIn}
+            disabled={isLoading}
+            className="w-full flex items-center justify-center gap-2"
+          >
+            {isLoading ? (
+              <Icons.spinner className="h-4 w-4 animate-spin" />
+            ) : (
+              <Icons.google className="h-4 w-4" />
+            )}
+            Sign in with Google
+          </Button>
+        </CardContent>
+        <CardFooter className="flex justify-center text-sm text-gray-500">
+          By signing in, you agree to our terms and privacy policy.
+        </CardFooter>
+      </Card>
     </div>
+  );
+}
+
+export default function AuthPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <Icons.spinner className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    }>
+      <AuthContent />
+    </Suspense>
   );
 }

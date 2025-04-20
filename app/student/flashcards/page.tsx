@@ -13,16 +13,16 @@ import { BookOpenText, ChevronLeft, ChevronRight, RotateCcw, CheckCircle2 } from
 
 export default function StudentFlashcards() {
   // Authentication check
-  const { isAuthenticated, userRole } = useAuth();
+  const { isAuthenticated, isStudent } = useAuth();
   const router = useRouter();
   
   React.useEffect(() => {
     if (!isAuthenticated) {
       router.push('/auth');
-    } else if (userRole !== 'student') {
-      router.push(`/${userRole}/dashboard`);
+    } else if (!isStudent) {
+      router.push('/teacher/dashboard');
     }
-  }, [isAuthenticated, userRole, router]);
+  }, [isAuthenticated, isStudent, router]);
   
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
@@ -92,7 +92,7 @@ export default function StudentFlashcards() {
   };
 
   // Don't render until authenticated
-  if (!isAuthenticated || userRole !== 'student') {
+  if (!isAuthenticated || !isStudent) {
     return null;
   }
 
@@ -248,7 +248,7 @@ export default function StudentFlashcards() {
                       <h4 className="text-xs sm:text-sm font-medium mb-2 sm:mb-3">Suggested Decks</h4>
                       <div className="grid grid-cols-1 gap-2">
                         {["History: World War II", "Geography: Continents", "Literature: Shakespeare"].map((deck, i) => (
-                          <Button key={i} variant="outline" className="w-full justify-start text-left text-xs sm:text-sm" size="sm">
+                          <Button key={i} variant="outline" size="sm" className="justify-start">
                             {deck}
                           </Button>
                         ))}
@@ -262,7 +262,7 @@ export default function StudentFlashcards() {
         </TabsContent>
         
         <TabsContent value="quizzes" className="mt-0">
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 sm:gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
             <motion.div 
               className="lg:col-span-3"
               initial={{ opacity: 0, y: 20 }}
@@ -271,73 +271,46 @@ export default function StudentFlashcards() {
             >
               <Card>
                 <CardContent className="p-3 sm:p-6">
-                  <h3 className="text-base sm:text-lg font-medium mb-4 sm:mb-6">Science Quiz</h3>
+                  <h3 className="text-base sm:text-lg font-medium mb-3 sm:mb-4">Available Quizzes</h3>
                   
-                  <div className="space-y-6 sm:space-y-8">
-                    {quizQuestions.map((q, qIndex) => (
-                      <div key={qIndex} className="space-y-2 sm:space-y-3">
-                        <h4 className="text-sm sm:text-base font-medium">Question {qIndex + 1}: {q.question}</h4>
-                        <div className="space-y-2">
-                          {q.options.map((option, oIndex) => (
-                            <div 
-                              key={oIndex}
-                              className="flex items-center space-x-3 p-2 sm:p-3 border rounded-md cursor-pointer hover:bg-accent/50 transition-colors"
-                            >
-                              <div className="h-4 w-4 sm:h-5 sm:w-5 rounded-full border flex items-center justify-center">
-                                <div className="h-2 w-2 sm:h-3 sm:w-3 rounded-full bg-transparent"></div>
-                              </div>
-                              <span className="text-xs sm:text-sm">{option}</span>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {[
+                      { title: "Physics: Forces and Motion", questions: 15, difficulty: "Medium", duration: "15 min" },
+                      { title: "Biology: Cell Structure", questions: 10, difficulty: "Easy", duration: "10 min" },
+                      { title: "Chemistry: Periodic Table", questions: 20, difficulty: "Hard", duration: "25 min" },
+                      { title: "Math: Algebra Basics", questions: 12, difficulty: "Medium", duration: "15 min" },
+                      { title: "History: Ancient Civilizations", questions: 15, difficulty: "Medium", duration: "20 min" },
+                      { title: "Geography: World Capitals", questions: 25, difficulty: "Hard", duration: "30 min" },
+                    ].map((quiz, i) => (
+                      <motion.div 
+                        key={i}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: i * 0.05 }}
+                      >
+                        <Card className="hover:shadow-md transition-shadow">
+                          <CardContent className="p-4">
+                            <h4 className="font-medium mb-2">{quiz.title}</h4>
+                            <div className="flex flex-wrap gap-2 mb-3">
+                              <span className="text-xs bg-secondary px-2 py-0.5 rounded-full">
+                                {quiz.questions} questions
+                              </span>
+                              <span className={`text-xs px-2 py-0.5 rounded-full ${
+                                quiz.difficulty === 'Easy' ? 'bg-green-100 text-green-800' :
+                                quiz.difficulty === 'Medium' ? 'bg-yellow-100 text-yellow-800' :
+                                'bg-red-100 text-red-800'
+                              }`}>
+                                {quiz.difficulty}
+                              </span>
+                              <span className="text-xs bg-secondary px-2 py-0.5 rounded-full">
+                                {quiz.duration}
+                              </span>
                             </div>
-                          ))}
-                        </div>
-                      </div>
+                            <Button size="sm" className="w-full">Start Quiz</Button>
+                          </CardContent>
+                        </Card>
+                      </motion.div>
                     ))}
-                  </div>
-                  
-                  <div className="mt-6 sm:mt-8 flex justify-end">
-                    <Button>Submit Answers</Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-            
-            <motion.div 
-              className="lg:col-span-2"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: 0.1 }}
-            >
-              <Card>
-                <CardContent className="p-3 sm:p-6">
-                  <h3 className="text-base sm:text-lg font-medium mb-3 sm:mb-4">Quiz History</h3>
-                  
-                  <div className="space-y-4 sm:space-y-6">
-                    <div className="space-y-2 sm:space-y-3">
-                      {[
-                        { name: "Biology Basics", score: "8/10", date: "2 days ago" },
-                        { name: "Physics Laws", score: "7/10", date: "1 week ago" },
-                        { name: "Chemistry Elements", score: "9/10", date: "2 weeks ago" },
-                      ].map((quiz, i) => (
-                        <div key={i} className="flex items-center justify-between p-2 sm:p-3 border rounded-md">
-                          <div>
-                            <div className="text-xs sm:text-sm font-medium">{quiz.name}</div>
-                            <div className="text-xs text-muted-foreground">{quiz.date}</div>
-                          </div>
-                          <div className="text-xs sm:text-sm font-medium">Score: {quiz.score}</div>
-                        </div>
-                      ))}
-                    </div>
-                    
-                    <div className="pt-2 sm:pt-4">
-                      <h4 className="text-xs sm:text-sm font-medium mb-2 sm:mb-3">Available Quizzes</h4>
-                      <div className="grid grid-cols-1 gap-2">
-                        {["History: Ancient Civilizations", "Mathematics: Calculus", "Computer Science: Algorithms"].map((quiz, i) => (
-                          <Button key={i} variant="outline" className="w-full justify-start text-left text-xs sm:text-sm" size="sm">
-                            {quiz}
-                          </Button>
-                        ))}
-                      </div>
-                    </div>
                   </div>
                 </CardContent>
               </Card>

@@ -1,66 +1,133 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
+import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
+import { signIn, signOut, useSession } from 'next-auth/react';
+import type { Session, DefaultSession } from 'next-auth';
 
-type UserRole = 'student' | 'teacher' | null;
+// Define the UserRole enum to match the Prisma schema
+export type UserRole = 'STUDENT' | 'TEACHER' | null;
 
-interface AuthContextType {
+// Define the extended user type
+export interface AuthUser {
+  id?: string;
+  name?: string | null;
+  email?: string | null;
+  image?: string | null;
+  role?: string;
+  roleConfirmed?: boolean;
+}
+
+// Extend the Session interface from next-auth
+declare module 'next-auth' {
+  interface Session {
+    user: {
+      id?: string;
+      name?: string | null;
+      email?: string | null;
+      image?: string | null;
+      role?: string;
+      roleConfirmed?: boolean;
+      sub?: string;
+    } & DefaultSession["user"]
+  }
+}
+
+// Define the auth context type with complete types
+export interface AuthContextType {
   isAuthenticated: boolean;
-  userRole: UserRole;
-  login: (role: UserRole) => void;
-  logout: () => void;
+  isStudent: boolean;
+  isTeacher: boolean;
+  roleConfirmed: boolean;
+  status: "authenticated" | "loading" | "unauthenticated";
+  login: (provider: string) => Promise<void>;
+  logout: () => Promise<void>;
+  isLoading: boolean;
+  user: AuthUser | null;
+  session: Session | null;
+  update: (data?: any) => Promise<Session | null>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+/**
+ * AuthProvider - Context provider that wraps the application to provide authentication state
+ * and functionality to all child components.
+ */
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-  const [userRole, setUserRole] = useState<UserRole>(null);
-  const router = useRouter();
-  const pathname = usePathname();
-
-  // On mount, check if user info exists in localStorage
+  const { data: session, status, update } = useSession();
+  const [isDebug, setIsDebug] = useState(false);
+  const initialMountRef = useRef(true);
+  
+  // Derived authentication states
+  const isLoading = status === 'loading';
+  const isAuthenticated = status === 'authenticated';
+  const isStudent = session?.user?.role === 'STUDENT';
+  const isTeacher = session?.user?.role === 'TEACHER';
+  const roleConfirmed = !!session?.user?.roleConfirmed;
+  
+  // Debug log to see what role we have - but only log after mount to prevent spam
   useEffect(() => {
-    const storedRole = localStorage.getItem('userRole');
-    if (storedRole && (storedRole === 'student' || storedRole === 'teacher')) {
-      setUserRole(storedRole);
-      setIsAuthenticated(true);
-    } else if (pathname !== '/auth' && !pathname.includes('/_not-found')) {
-      // If not authenticated and not on auth page, redirect to auth
-      router.push('/auth');
+    // Enable debug mode if query param is present
+    if (typeof window !== 'undefined') {
+      setIsDebug(window.location.search.includes('debug=true'));
     }
-  }, [pathname, router]);
+    
+    if (isDebug && isAuthenticated && session?.user && !initialMountRef.current) {
+      console.log('Auth Debug - Session:', {
+        role: session?.user?.role,
+        roleConfirmed: session?.user?.roleConfirmed,
+        fullSession: session
+      });
+    }
+  }, [isAuthenticated, session, isDebug]);
 
-  const login = (role: UserRole) => {
-    if (role) {
-      localStorage.setItem('userRole', role);
-      setUserRole(role);
-      setIsAuthenticated(true);
-      
-      if (role === 'student') {
-        router.push('/student/dashboard');
-      } else if (role === 'teacher') {
-        router.push('/teacher/dashboard');
-      }
+  // Track initial mount
+  useEffect(() => {
+    if (initialMountRef.current) {
+      initialMountRef.current = false;
     }
+  }, []);
+  
+  // Login function - returns a promise for better handling
+  const login = async (provider: string) => {
+    // Set a flag in localStorage to track new sign ups
+    localStorage.setItem('auth_flow_started', 'true');
+    
+    // Sign in without a callback URL, middleware will handle redirects
+    await signIn(provider);
   };
 
-  const logout = () => {
-    localStorage.removeItem('userRole');
-    setUserRole(null);
-    setIsAuthenticated(false);
-    router.push('/auth');
+  // Logout function - returns a promise for better handling
+  const logout = async () => {
+    await signOut({ callbackUrl: '/auth' });
+  };
+
+  const contextValue: AuthContextType = {
+    isAuthenticated, 
+    isStudent,
+    isTeacher,
+    roleConfirmed,
+    status,
+    login, 
+    logout, 
+    isLoading,
+    user: session?.user as AuthUser | null,
+    session,
+    update
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, userRole, login, logout }}>
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );
 }
 
-export function useAuth() {
+/**
+ * useAuth - Custom hook to access authentication context throughout the application
+ * Provides user data, authentication status, and authentication methods.
+ */
+export function useAuth(): AuthContextType {
   const context = useContext(AuthContext);
   if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');

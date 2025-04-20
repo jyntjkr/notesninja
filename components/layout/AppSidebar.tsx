@@ -1,8 +1,8 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -31,15 +31,28 @@ interface AppSidebarProps {
   userRole?: 'student' | 'teacher';
 }
 
+/**
+ * AppSidebar - Main sidebar component for the application
+ * Shows different navigation links based on user role
+ */
 const AppSidebar = ({ userRole: propUserRole }: AppSidebarProps) => {
-  const { state, toggleSidebar } = useSidebar();
-  const isCollapsed = state === 'collapsed';
+  const { state, toggleSidebar, isMobile, openMobile } = useSidebar();
+  const isCollapsed = state === 'collapsed' && !isMobile;
   const pathname = usePathname();
-  const { userRole: authUserRole, logout } = useAuth();
-  const isMobile = useIsMobile();
+  const router = useRouter();
+  const { isStudent, isTeacher, logout } = useAuth();
+  const initialMountRef = useRef(true);
   
-  // Use the provided role from props, or fall back to the authenticated user role
-  const userRole = propUserRole || authUserRole || 'student';
+  // Determine effective role (from props or from auth state)
+  const effectiveRole = propUserRole || (isTeacher ? 'teacher' : 'student');
+  
+  // Debug current role - only on mount to prevent spam
+  useEffect(() => {
+    if (initialMountRef.current) {
+      initialMountRef.current = false;
+      console.log('AppSidebar - role info:', { propUserRole, isStudent, isTeacher, effectiveRole });
+    }
+  }, [propUserRole, isStudent, isTeacher, effectiveRole]);
 
   const studentLinks = [
     { name: 'Dashboard', icon: <Home className="h-5 w-5" />, path: '/student/dashboard' },
@@ -58,51 +71,65 @@ const AppSidebar = ({ userRole: propUserRole }: AppSidebarProps) => {
     { name: 'Settings', icon: <Settings className="h-5 w-5" />, path: '/teacher/settings' },
   ];
 
-  const links = userRole === 'student' ? studentLinks : teacherLinks;
+  const links = effectiveRole === 'student' ? studentLinks : teacherLinks;
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
   };
+
+  // On mobile, always show the full sidebar content when opened
+  const showFullContent = isMobile ? true : !isCollapsed;
 
   return (
     <div 
       className={cn(
-        "h-full bg-card border-r border-border flex flex-col",
+        "h-full bg-card flex flex-col",
         "overflow-hidden"
       )}
     >
-      {/* Header */}
-      <div className={cn(
-        "px-4 py-4 flex items-center",
-        isCollapsed && !isMobile ? "justify-center" : "justify-between"
-      )}>
-        {(!isCollapsed || isMobile) && (
-          <div className="flex items-center gap-2">
-            {userRole === 'student' ? 
-              <GraduationCap className="h-6 w-6 text-primary" /> : 
-              <Users className="h-6 w-6 text-primary" />
-            }
-            <span className="font-bold text-lg">Note Companion</span>
-          </div>
-        )}
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          onClick={toggleSidebar}
-          className="h-8 w-8"
-        >
-          {isCollapsed && !isMobile ? <Menu className="h-5 w-5" /> : <X className="h-5 w-5" />}
-        </Button>
-      </div>
+      {/* Header - shown differently on desktop vs mobile */}
+      {!isMobile && (
+        <div className={cn(
+          "px-4 py-4 flex items-center",
+          isCollapsed ? "justify-center" : "justify-between"
+        )}>
+          {!isCollapsed && (
+            <div className="flex items-center gap-2">
+              {effectiveRole === 'student' ? 
+                <GraduationCap className="h-6 w-6 text-primary" /> : 
+                <Users className="h-6 w-6 text-primary" />
+              }
+              <span className="font-bold text-lg">Note Companion</span>
+            </div>
+          )}
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={toggleSidebar}
+            className="h-8 w-8"
+          >
+            {isCollapsed ? <Menu className="h-5 w-5" /> : <X className="h-5 w-5" />}
+          </Button>
+        </div>
+      )}
+      
+      {/* Mobile header - adds some padding at the top */}
+      {isMobile && (
+        <div className="h-14"></div>
+      )}
       
       <Separator />
       
       {/* Navigation Links */}
       <ScrollArea className="flex-1 px-3">
         <div className="py-4">
-          {!isCollapsed && (
+          {showFullContent && (
             <div className="text-xs font-medium text-muted-foreground mb-4 px-1">
-              {userRole === 'student' ? 'STUDENT' : 'TEACHER'} MENU
+              {effectiveRole === 'student' ? 'STUDENT' : 'TEACHER'} MENU
             </div>
           )}
           
@@ -113,15 +140,14 @@ const AppSidebar = ({ userRole: propUserRole }: AppSidebarProps) => {
                 href={link.path}
                 className={cn(
                   "flex items-center py-2.5 rounded-md text-sm font-medium transition-colors",
-                  // On mobile, always show text even when collapsed
-                  isCollapsed && !isMobile ? "justify-center px-2" : "px-3",
+                  showFullContent ? "px-3" : "justify-center px-2",
                   pathname === link.path
                     ? "bg-primary text-primary-foreground hover:bg-primary/90"
                     : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                 )}
               >
                 {link.icon}
-                {(!isCollapsed || isMobile) && <span className="ml-3">{link.name}</span>}
+                {showFullContent && <span className="ml-3">{link.name}</span>}
               </Link>
             ))}
           </nav>
@@ -133,14 +159,14 @@ const AppSidebar = ({ userRole: propUserRole }: AppSidebarProps) => {
       {/* User Profile */}
       <div className={cn(
         "p-4 flex items-center",
-        isCollapsed && !isMobile ? "justify-center" : ""
+        isCollapsed ? "justify-center" : ""
       )}>
-        {isCollapsed && !isMobile ? (
+        {isCollapsed ? (
           <div className="flex flex-col gap-3 items-center">
             <Button variant="outline" size="icon" asChild className="rounded-full w-9 h-9 p-0">
               <Link href="/profile">
                 <div className="rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold w-full h-full">
-                  {userRole === 'student' ? 'S' : 'T'}
+                  {effectiveRole === 'student' ? 'S' : 'T'}
                 </div>
               </Link>
             </Button>
@@ -157,14 +183,14 @@ const AppSidebar = ({ userRole: propUserRole }: AppSidebarProps) => {
           <div className="flex items-center justify-between w-full">
             <div className="flex items-center gap-3">
               <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold">
-                {userRole === 'student' ? 'S' : 'T'}
+                {effectiveRole === 'student' ? 'S' : 'T'}
               </div>
               <div className="flex flex-col">
                 <span className="text-sm font-medium">
-                  {userRole === 'student' ? 'Student User' : 'Teacher User'}
+                  {effectiveRole === 'student' ? 'Student User' : 'Teacher User'}
                 </span>
                 <span className="text-xs text-muted-foreground">
-                  {userRole === 'student' ? 'Student Account' : 'Teacher Account'}
+                  {effectiveRole === 'student' ? 'Student Account' : 'Teacher Account'}
                 </span>
               </div>
             </div>

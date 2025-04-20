@@ -6,9 +6,10 @@ import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { GraduationCap, Users, LogOut } from 'lucide-react';
+import { signOut } from 'next-auth/react';
 
 export default function ProfilePage() {
-  const { isAuthenticated, userRole, logout } = useAuth();
+  const { isAuthenticated, user, isStudent, isTeacher } = useAuth();
   const router = useRouter();
 
   // If not authenticated, redirect to auth page
@@ -18,12 +19,12 @@ export default function ProfilePage() {
     }
   }, [isAuthenticated, router]);
 
-  if (!isAuthenticated || !userRole) {
+  if (!isAuthenticated || !user) {
     return null;
   }
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await signOut({ callbackUrl: '/auth' });
   };
 
   return (
@@ -31,7 +32,7 @@ export default function ProfilePage() {
       <Card>
         <CardHeader className="text-center">
           <div className="mx-auto bg-primary/10 p-4 rounded-full mb-4">
-            {userRole === 'student' ? (
+            {isStudent ? (
               <GraduationCap className="h-10 w-10 text-primary" />
             ) : (
               <Users className="h-10 w-10 text-primary" />
@@ -39,20 +40,20 @@ export default function ProfilePage() {
           </div>
           <CardTitle className="text-2xl">Your Profile</CardTitle>
           <CardDescription>
-            You are logged in as a {userRole === 'student' ? 'Student' : 'Teacher'}
+            You are logged in as a {isStudent ? 'Student' : 'Teacher'}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <h3 className="text-sm font-medium">Account Type</h3>
             <p className="text-sm text-muted-foreground">
-              {userRole === 'student' ? 'Student Account' : 'Teacher Account'}
+              {isStudent ? 'Student Account' : 'Teacher Account'}
             </p>
           </div>
           <div className="space-y-2">
             <h3 className="text-sm font-medium">Access</h3>
             <p className="text-sm text-muted-foreground">
-              {userRole === 'student' 
+              {isStudent 
                 ? 'You have access to student features like uploading notes, creating flashcards, and tracking revisions.' 
                 : 'You have access to teacher features like uploading material, creating tests, and monitoring student progress.'}
             </p>

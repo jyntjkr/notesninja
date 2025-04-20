@@ -238,32 +238,30 @@ function SidebarTrigger({
 }
 
 // Floating mobile toggle button that appears when sidebar is collapsed on mobile
-function SidebarMobileToggle({
-  className,
-  ...props
-}: React.ComponentProps<typeof Button>) {
-  const { toggleSidebar, isMobile, openMobile } = useSidebar()
+function SidebarMobileToggle({ className, ...props }: React.ComponentProps<typeof Button>) {
+  const { toggleSidebar, isMobile, openMobile } = useSidebar();
 
-  // Only show when on mobile, sidebar is collapsed, and it's hidden off-screen
-  // This prevents showing the toggle button when the sidebar is already partially visible
-  if (!isMobile || openMobile) return null;
+  // Only show this button on mobile when sidebar is collapsed
+  if (!isMobile || openMobile) {
+    return null;
+  }
 
   return (
     <Button
-      data-sidebar="mobile-toggle"
+      data-slot="sidebar-mobile-toggle"
       variant="secondary"
-      size="sm"
+      size="icon"
       className={cn(
-        "fixed left-4 top-4 z-[100] rounded-lg shadow-md bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-2 px-3",
+        "fixed left-4 bottom-4 z-50 rounded-full shadow-md size-12",
         className
       )}
       onClick={toggleSidebar}
       {...props}
     >
-      <Menu className="h-4 w-4" />
-      <span>Menu</span>
+      <Menu className="size-5" />
+      <span className="sr-only">Toggle Sidebar</span>
     </Button>
-  )
+  );
 }
 
 function SidebarRail({ className, ...props }: React.ComponentProps<"button">) {
@@ -291,18 +289,21 @@ function SidebarRail({ className, ...props }: React.ComponentProps<"button">) {
 }
 
 function SidebarInset({ className, ...props }: React.ComponentProps<"main">) {
-  const { state, isMobile } = useSidebar();
+  const { state, isMobile, openMobile } = useSidebar();
   
   return (
-    <main
-      className={cn(
-        "flex-1 transition-all duration-300 p-6",
-        isMobile ? "pt-[4.5rem] ml-0" : // Increase top padding on mobile for more space below navbar
-        (state === "expanded" ? "ml-[16rem]" : "ml-[4rem]"), // On desktop, adjust margin based on sidebar state
-        className
-      )}
-      {...props}
-    />
+    <>
+      <main
+        className={cn(
+          "flex-1 transition-all duration-300 p-6",
+          isMobile ? "pt-[4.5rem] ml-0" : // Increase top padding on mobile for more space below navbar
+          (state === "expanded" ? "ml-[16rem]" : "ml-[4rem]"), // On desktop, adjust margin based on sidebar state
+          className
+        )}
+        {...props}
+      />
+      <SidebarMobileToggle />
+    </>
   );
 }
 

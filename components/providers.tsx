@@ -5,49 +5,76 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { SidebarProvider, SidebarInset, Sidebar } from "@/components/ui/sidebar";
+import { SessionProvider } from "next-auth/react";
 import AppSidebar from "@/components/layout/AppSidebar";
 import MobileTopBar from "@/components/layout/MobileTopBar";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useEffect, useRef } from "react";
 
 // Create a client
 const queryClient = new QueryClient();
 
-// This component wraps the application with all the necessary providers
+/**
+ * Providers - Wraps the application with all necessary context providers
+ * Sets up authentication, UI components, and global state management
+ */
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <AuthProvider>
-          <AuthenticatedLayout>
-            {children}
-          </AuthenticatedLayout>
-        </AuthProvider>
-      </TooltipProvider>
-    </QueryClientProvider>
+    <SessionProvider>
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <AuthProvider>
+            <Toaster />
+            <Sonner />
+            <AuthenticatedLayout>
+              {children}
+            </AuthenticatedLayout>
+          </AuthProvider>
+        </TooltipProvider>
+      </QueryClientProvider>
+    </SessionProvider>
   );
 }
 
-// AuthenticatedLayout conditionally renders the sidebar based on authentication status
+/**
+ * AuthenticatedLayout - Conditionally renders the sidebar based on authentication status
+ * Only shows the full application layout for authenticated users with confirmed roles
+ */
 function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, userRole } = useAuth();
+  const { isAuthenticated, isStudent, isTeacher, roleConfirmed } = useAuth();
   const isMobile = useIsMobile();
+  const initialMountRef = useRef(true);
+
+  // Log auth status on first mount
+  useEffect(() => {
+    if (initialMountRef.current) {
+      initialMountRef.current = false;
+      // Only log on first mount
+      console.log('AuthenticatedLayout - auth status:', { 
+        isAuthenticated, 
+        isStudent, 
+        isTeacher, 
+        roleConfirmed 
+      });
+    }
+  }, [isAuthenticated, isStudent, isTeacher, roleConfirmed]);
+
+  // Determine user role from boolean flags
+  const userRoleString = isTeacher ? 'teacher' : 'student';
 
   // Always render children - either directly or within the sidebar layout
-  // This ensures consistent hook rendering
-  if (!isAuthenticated) {
+  if (!isAuthenticated || !roleConfirmed) {
     return <>{children}</>;
   }
 
-  // If authenticated, render the sidebar layout
+  // If authenticated and role confirmed, render the sidebar layout
   return (
     <SidebarProvider>
-      {isMobile && <MobileTopBar userRole={userRole === 'student' || userRole === 'teacher' ? userRole : undefined} />}
+      {isMobile && <MobileTopBar userRole={userRoleString} />}
       <div className="min-h-screen flex w-full">
         <Sidebar>
-          <AppSidebar />
+          <AppSidebar userRole={userRoleString} />
         </Sidebar>
         <SidebarInset className="bg-background">
           <div className="h-full max-w-7xl mx-auto">
