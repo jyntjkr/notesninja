@@ -1,39 +1,45 @@
 import { PrismaClient } from '../lib/generated/prisma';
 
-// PrismaClient is attached to the `global` object in development to prevent
-// exhausting your database connection limit.
-const globalForPrisma = global as unknown as {
-  prisma: PrismaClient | undefined;
+/**
+ * PrismaClient is attached to the `global` object in development to prevent
+ * exhausting your database connection limit.
+ * 
+ * Configure with specific connection settings to prevent prepared statement conflicts
+ * when multiple deployments use the same database.
+ */
+
+// Generate a random identifier for this instance to avoid conflicts
+const instanceId = Math.random().toString(36).substring(2, 10);
+
+const createPrismaClient = () => {
+  return new PrismaClient({
+    log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
+    
+    // Apply connection pool settings to prevent conflicts
+    datasourceUrl: process.env.DATABASE_URL ? 
+      // Add connection parameters to prevent prepared statement conflicts
+      `${process.env.DATABASE_URL}?pgbouncer=true&connection_limit=5&pool_timeout=10&statement_cache_size=0&application_name=noteninja_${instanceId}` : 
+      undefined,
+  });
 };
 
-// Create or reuse Prisma client instance
-export const prisma = globalForPrisma.prisma ?? new PrismaClient();
+// Reusable client with proper typing
+type PrismaClientSingleton = ReturnType<typeof createPrismaClient>;
 
-// Add error handling middleware if this is a new instance
-if (!globalForPrisma.prisma) {
-  // Add middleware for handling prepared statement errors
-  prisma.$use(async (params, next) => {
-    try {
-      return await next(params);
-    } catch (error: any) {
-      // Check if it's a prepared statement error
-      if (
-        error.message?.includes('prepared statement') || 
-        error.code === '42P05'
-      ) {
-        console.error('Prisma prepared statement error detected, attempting to recover');
-        
-        // Try to disconnect and let next request create a fresh connection
-        try {
-          await prisma.$disconnect();
-        } catch (disconnectError) {
-          console.error('Error disconnecting Prisma client:', disconnectError);
-        }
-      }
-      throw error;
-    }
-  });
+// Define properly on global scope
+const globalForPrisma = globalThis as unknown as {
+  prisma: PrismaClientSingleton | undefined;
+};
+
+// Only create a new client if one doesn't exist already
+export const prisma = globalForPrisma.prisma ?? createPrismaClient();
+
+// Save the client instance to avoid multiple instances in development
+if (process.env.NODE_ENV !== 'production') {
+  globalForPrisma.prisma = prisma;
 }
 
-// Save client to global object in development to reuse connections
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma; 
+// Properly handle connection shutdown to avoid connection leaks
+process.on('beforeExit', async () => {
+  await prisma.$disconnect();
+}); 
