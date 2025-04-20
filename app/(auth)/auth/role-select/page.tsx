@@ -50,7 +50,7 @@ export default function RoleSelectPage() {
         throw new Error(data.error || "Failed to set role");
       }
 
-      // Update the session with the new role
+      // Update the session with the new role and wait for it to complete
       await update({ 
         role: role, 
         roleConfirmed: true
@@ -58,9 +58,13 @@ export default function RoleSelectPage() {
 
       toast.success("Role set successfully!");
 
-      // Redirect based on role
-      const redirectPath = role.toLowerCase() === "teacher" ? "/teacher/dashboard" : "/student/dashboard";
-      router.push(redirectPath);
+      // Add a small delay to ensure session state is updated before redirect
+      setTimeout(() => {
+        // Redirect based on role using window.location for a full page refresh
+        // This ensures we get a fresh session from the server
+        const redirectPath = role.toLowerCase() === "teacher" ? "/teacher/dashboard" : "/student/dashboard";
+        window.location.href = redirectPath;
+      }, 500);
     } catch (error: any) {
       console.error("Role selection error:", error);
       toast.error(error.message || "Something went wrong");
