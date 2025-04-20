@@ -47,11 +47,15 @@ export default function TeacherDashboard() {
         throw new Error('Failed to fetch materials');
       }
       const data = await response.json();
-      setMaterials(data.materials);
-      setMaterialCount(data.materials.length);
+      // Handle both data formats for backward compatibility
+      const materialsData = data.materials || data.uploads || [];
+      setMaterials(materialsData);
+      setMaterialCount(materialsData.length);
     } catch (error) {
       console.error('Error fetching materials:', error);
       toast.error('Failed to fetch your materials');
+      // Set empty array on error
+      setMaterials([]);
     } finally {
       setMaterialsLoading(false);
     }
@@ -178,7 +182,7 @@ export default function TeacherDashboard() {
               <div className="flex items-center justify-center p-8">
                 <Icons.spinner className="h-6 w-6 animate-spin" />
               </div>
-            ) : materials.length === 0 ? (
+            ) : !materials || materials.length === 0 ? (
               <Card>
                 <CardContent className="p-8 flex flex-col items-center justify-center text-center">
                   <FileText className="h-10 w-10 text-muted-foreground mb-4" />
@@ -236,7 +240,7 @@ export default function TeacherDashboard() {
               ))
             )}
             
-            {materials.length > 0 && (
+            {materials && materials.length > 0 && (
               <div className="text-center pt-2">
                 <Button variant="outline" onClick={() => router.push('/teacher/upload')}>
                   Upload More
@@ -250,7 +254,7 @@ export default function TeacherDashboard() {
               <div className="flex items-center justify-center p-8">
                 <Icons.spinner className="h-6 w-6 animate-spin" />
               </div>
-            ) : materials.length === 0 ? (
+            ) : !materials || materials.length === 0 ? (
               <Card>
                 <CardContent className="p-8 flex flex-col items-center justify-center text-center">
                   <FileText className="h-10 w-10 text-muted-foreground mb-4" />

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import PageHeader from '@/components/shared/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,17 +10,35 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { motion } from 'framer-motion';
-import { FlaskConical, Plus, Minus, FileText, FileCheck, Download, AlarmCheck } from 'lucide-react';
+import { FlaskConical, Plus, Minus, FileText, FileCheck, Download, AlarmCheck, Loader2, FileDown } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
+import { SimplePDFDownloadButton } from '@/components/test/SimplePDFRenderer';
 
+// Interface for upload data
+interface Upload {
+  id: string;
+  title: string;
+  fileUrl: string;
+  fileType: string;
+  description: string;
+  materialType: string;
+  subject: string;
+  fileName: string;
+}
 
 const TeacherTestGenerator = () => {
   const [testTitle, setTestTitle] = useState('');
   const [testDescription, setTestDescription] = useState('');
   const [testSubject, setTestSubject] = useState('');
+  const [selectedMaterial, setSelectedMaterial] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [isGenerated, setIsGenerated] = useState(false);
+  const [generatedTest, setGeneratedTest] = useState('');
+  const [materials, setMaterials] = useState<Upload[]>([]);
+  const [isLoadingMaterials, setIsLoadingMaterials] = useState(false);
+  const [isPdfLoading, setIsPdfLoading] = useState(false);
   
   const [questions, setQuestions] = useState([
     { type: 'mcq', quantity: 5, difficulty: 'medium' },
@@ -32,13 +50,36 @@ const TeacherTestGenerator = () => {
   const { isAuthenticated, isTeacher } = useAuth();
   const router = useRouter();
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (!isAuthenticated) {
       router.push('/auth');
     } else if (!isTeacher) {
       router.push('/student/dashboard');
+    } else {
+      // Fetch materials
+      fetchMaterials();
     }
   }, [isAuthenticated, isTeacher, router]);
+
+  // Fetch materials from the API
+  const fetchMaterials = async () => {
+    setIsLoadingMaterials(true);
+    try {
+      const response = await fetch('/api/materials/get-materials');
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch materials');
+      }
+
+      const data = await response.json();
+      setMaterials(data.uploads || []);
+    } catch (error) {
+      console.error('Error fetching materials:', error);
+      toast.error('Failed to load materials. Please try again.');
+    } finally {
+      setIsLoadingMaterials(false);
+    }
+  };
 
   // Don't render until authenticated
   if (!isAuthenticated || !isTeacher) {
@@ -73,13 +114,84 @@ const TeacherTestGenerator = () => {
     setQuestions(newQuestions);
   };
 
-  const handleGenerateTest = () => {
+  const handleGenerateTest = async () => {
+    // Validate required fields
+    if (!testTitle) {
+      toast.error('Please enter a test title');
+      return;
+    }
+
+    if (!testSubject) {
+      toast.error('Please select a subject');
+      return;
+    }
+
+    if (!selectedMaterial) {
+      toast.error('Please select a source material');
+      return;
+    }
+
     setIsGenerating(true);
-    // Simulate AI generation delay
-    setTimeout(() => {
+    try {
+      // Call the API to generate the test
+      const response = await fetch('/api/tests/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          materialId: selectedMaterial,
+          testConfig: {
+            testTitle,
+            testSubject,
+            testDescription,
+            questions,
+          },
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate test');
+      }
+
+      const data = await response.json();
+      
+      if (data.success && data.data.test) {
+        setGeneratedTest(data.data.test);
+        setIsGenerated(true);
+        toast.success('Test generated successfully!');
+      } else {
+        throw new Error(data.error || 'Failed to generate test');
+      }
+    } catch (error) {
+      console.error('Error generating test:', error);
+      toast.error('Failed to generate test. Please try again.');
+    } finally {
       setIsGenerating(false);
-      setIsGenerated(true);
-    }, 3000);
+    }
+  };
+
+  const handleDownloadMarkdown = () => {
+    // Create a blob from the generated test
+    const blob = new Blob([generatedTest], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    
+    // Create a link and click it to download
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${testTitle.replace(/\s+/g, '_').toLowerCase()}_test.md`;
+    document.body.appendChild(a);
+    a.click();
+    
+    // Clean up
+    URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+    
+    toast.success('Test downloaded as Markdown!');
+  };
+
+  const getPdfFileName = () => {
+    return `${testTitle.replace(/\s+/g, '_').toLowerCase()}_test.pdf`;
   };
 
   const getQuestionTotal = () => {
@@ -145,16 +257,26 @@ const TeacherTestGenerator = () => {
                   
                   <div className="space-y-2">
                     <Label htmlFor="source">Source Material</Label>
-                    <Select defaultValue="material_1">
+                    <Select 
+                      value={selectedMaterial} 
+                      onValueChange={setSelectedMaterial}
+                      disabled={isLoadingMaterials}
+                    >
                       <SelectTrigger id="source">
-                        <SelectValue placeholder="Select material" />
+                        <SelectValue placeholder={isLoadingMaterials ? "Loading materials..." : "Select material"} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="material_1">Physics: Mechanics (All chapters)</SelectItem>
-                        <SelectItem value="material_2">Physics: Laws of Motion</SelectItem>
-                        <SelectItem value="material_3">Physics: Energy and Work</SelectItem>
-                        <SelectItem value="material_4">Physics: Momentum</SelectItem>
-                        <SelectItem value="custom">Use custom content</SelectItem>
+                        {materials.length > 0 ? (
+                          materials.map((material) => (
+                            <SelectItem key={material.id} value={material.id}>
+                              {material.title}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <SelectItem value="no_materials" disabled>
+                            {isLoadingMaterials ? "Loading materials..." : "No materials found"}
+                          </SelectItem>
+                        )}
                       </SelectContent>
                     </Select>
                   </div>
@@ -251,71 +373,35 @@ const TeacherTestGenerator = () => {
                       </Button>
                     </div>
                   ))}
+                  
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    size="sm" 
+                    className="w-full"
+                    onClick={handleAddQuestion}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Question Type
+                  </Button>
                 </div>
-                
+              </div>
+              
+              <div className="pt-2">
                 <Button 
                   type="button" 
-                  variant="outline" 
-                  size="sm" 
-                  className="mt-2"
-                  onClick={handleAddQuestion}
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Question Type
-                </Button>
-              </div>
-              
-              <Separator />
-              
-              <div className="space-y-4">
-                <h3 className="text-base font-medium">Advanced Options</h3>
-                
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="time">Time Limit (minutes)</Label>
-                    <Select defaultValue="60">
-                      <SelectTrigger id="time">
-                        <SelectValue placeholder="Select time limit" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="30">30 minutes</SelectItem>
-                        <SelectItem value="45">45 minutes</SelectItem>
-                        <SelectItem value="60">60 minutes</SelectItem>
-                        <SelectItem value="90">90 minutes</SelectItem>
-                        <SelectItem value="120">2 hours</SelectItem>
-                        <SelectItem value="unlimited">No time limit</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="questions-per-page">Questions Per Page</Label>
-                    <Select defaultValue="all">
-                      <SelectTrigger id="questions-per-page">
-                        <SelectValue placeholder="Select display option" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="1">1 question per page</SelectItem>
-                        <SelectItem value="5">5 questions per page</SelectItem>
-                        <SelectItem value="10">10 questions per page</SelectItem>
-                        <SelectItem value="all">All questions on one page</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="flex justify-end">
-                <Button 
-                  disabled={!testTitle || !testSubject || isGenerating}
+                  className="w-full"
                   onClick={handleGenerateTest}
-                  className="gap-2"
+                  disabled={isGenerating}
                 >
                   {isGenerating ? (
-                    <>Generating Test...</>
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Generating Test...
+                    </>
                   ) : (
                     <>
-                      <FlaskConical className="h-4 w-4" />
+                      <FlaskConical className="h-4 w-4 mr-2" />
                       Generate Test
                     </>
                   )}
@@ -331,125 +417,86 @@ const TeacherTestGenerator = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.1 }}
         >
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Test Preview</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {!isGenerated ? (
-                  <div className="h-96 flex flex-col items-center justify-center text-center p-4">
-                    <div className="mb-4 bg-muted/50 p-4 rounded-full">
-                      <FileText className="h-8 w-8 text-muted-foreground" />
-                    </div>
-                    <h3 className="text-lg font-medium mb-2">No test generated yet</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Configure your test settings and click the Generate button to create a new test.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-6">
-                    <div className="p-6 border rounded-md">
-                      <h3 className="text-xl font-bold mb-2">{testTitle || "Physics Midterm Exam"}</h3>
-                      <p className="text-sm text-muted-foreground mb-4">
-                        {testDescription || "Complete all questions in the time allotted. Show all your work for partial credit."}
-                      </p>
-                      
-                      <Separator className="my-4" />
-                      
-                      <div className="space-y-6">
-                        <div className="space-y-2">
-                          <h4 className="font-medium">Multiple Choice Questions (5)</h4>
-                          <p className="text-sm text-muted-foreground">Select the best answer for each question.</p>
-                          
-                          <div className="p-3 border rounded-md">
-                            <div className="font-medium mb-2">1. What is Newton&apos;s First Law of Motion?</div>
-                            <div className="space-y-2 text-sm">
-                              <div className="flex items-center space-x-2">
-                                <div className="h-4 w-4 rounded-full border border-input flex-shrink-0"></div>
-                                <span>A. Force equals mass times acceleration</span>
-                              </div>
-                              <div className="flex items-center space-x-2">
-                                <div className="h-4 w-4 rounded-full border border-input flex-shrink-0"></div>
-                                <span>B. An object at rest stays at rest, and an object in motion stays in motion unless acted upon by an outside force</span>
-                              </div>
-                              <div className="flex items-center space-x-2">
-                                <div className="h-4 w-4 rounded-full border border-input flex-shrink-0"></div>
-                                <span>C. For every action, there is an equal and opposite reaction</span>
-                              </div>
-                              <div className="flex items-center space-x-2">
-                                <div className="h-4 w-4 rounded-full border border-input flex-shrink-0"></div>
-                                <span>D. Energy cannot be created or destroyed, only transformed</span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                        
-                        <div className="space-y-2">
-                          <h4 className="font-medium">Short Answer Questions (3)</h4>
-                          <p className="text-sm text-muted-foreground">Answer each question in 2-3 sentences.</p>
-                          
-                          <div className="p-3 border rounded-md">
-                            <div className="font-medium mb-2">6. Explain the principle of conservation of momentum and provide a real-world example.</div>
-                            <div className="border-b border-dashed pt-8"></div>
-                          </div>
-                        </div>
-                        
-                        <div className="space-y-2">
-                          <h4 className="font-medium">Long Answer Questions (2)</h4>
-                          <p className="text-sm text-muted-foreground">Provide detailed explanations with examples.</p>
-                          
-                          <div className="p-3 border rounded-md">
-                            <div className="font-medium mb-2">9. Describe the relationship between work, energy, and power. Include relevant equations and explain how they are interconnected.</div>
-                            <div className="border-b border-dashed pt-8"></div>
-                          </div>
-                        </div>
-                      </div>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileCheck className="h-5 w-5" />
+                Test Preview
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {!isGenerated ? (
+                <div className="flex flex-col items-center justify-center py-16 px-4 text-center border rounded-md border-dashed bg-muted/40">
+                  <FileText className="h-10 w-10 text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-medium mb-2">No Test Generated Yet</h3>
+                  <p className="text-sm text-muted-foreground mb-4 max-w-md">
+                    Configure your test settings on the left and click "Generate Test" to create an AI-generated test based on your uploaded material.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="border rounded-md p-4 relative bg-card">
+                    <div className="flex justify-end gap-2 mb-4">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleDownloadMarkdown}
+                      >
+                        <FileDown className="h-4 w-4 mr-2" />
+                        Download MD
+                      </Button>
+                      <SimplePDFDownloadButton
+                        title={testTitle}
+                        description={testDescription}
+                        content={generatedTest}
+                        fileName={getPdfFileName()}
+                        onStart={() => {
+                          setIsPdfLoading(true);
+                          toast.info('Preparing PDF for download...');
+                        }}
+                        onComplete={(success) => {
+                          setIsPdfLoading(false);
+                          if (success) {
+                            toast.success('PDF downloaded successfully!');
+                          } else {
+                            toast.error('Failed to download PDF. Please try again.');
+                          }
+                        }}
+                      >
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          disabled={isPdfLoading}
+                        >
+                          {isPdfLoading ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Preparing PDF...
+                            </>
+                          ) : (
+                            <>
+                              <FileText className="h-4 w-4 mr-2" />
+                              Download PDF
+                            </>
+                          )}
+                        </Button>
+                      </SimplePDFDownloadButton>
                     </div>
                     
-                    <div className="flex justify-between">
-                      <Button variant="outline" className="gap-2">
-                        <FileCheck className="h-4 w-4" />
-                        Edit Test
-                      </Button>
-                      <Button className="gap-2">
-                        <Download className="h-4 w-4" />
-                        Download PDF
-                      </Button>
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-bold text-center">{testTitle}</h3>
+                      {testDescription && <p className="text-sm italic text-center">{testDescription}</p>}
+                      
+                      <div className="mt-4 prose-sm max-h-[600px] overflow-y-auto p-2">
+                        <pre className="text-sm whitespace-pre-wrap">{generatedTest}</pre>
+                      </div>
                     </div>
                   </div>
-                )}
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader>
-                <CardTitle>Recently Generated Tests</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {[
-                    { title: "Chemistry Final Exam", date: "Apr 15, 2025", questions: 25 },
-                    { title: "Biology Midterm", date: "Apr 10, 2025", questions: 20 },
-                    { title: "Physics Quiz: Forces", date: "Apr 5, 2025", questions: 15 },
-                  ].map((test, i) => (
-                    <div key={i} className="flex items-center justify-between p-3 border rounded-md">
-                      <div className="flex items-center gap-3">
-                        <div className="bg-muted/50 p-2 rounded-full">
-                          <AlarmCheck className="h-4 w-4 text-muted-foreground" />
-                        </div>
-                        <div>
-                          <div className="font-medium">{test.title}</div>
-                          <div className="text-xs text-muted-foreground">{test.date} • {test.questions} questions</div>
-                        </div>
-                      </div>
-                      <Button variant="ghost" size="sm">View</Button>
-                    </div>
-                  ))}
                 </div>
-              </CardContent>
-            </Card>
-          </div>
+              )}
+            </CardContent>
+          </Card>
         </motion.div>
       </div>
     </>

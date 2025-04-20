@@ -1,0 +1,197 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# PDF Parsing Code
+
+The PDF parsing functionality is implemented in multiple places in the application. Here's the complete code focused specifically on the PDF parsing process:
+
+## 1. Core PDF Parsing Function in UploadThing (server-side)
+
+This is from `app/api/uploadthing/core.ts`:
+
+```typescript
+import { createUploadthing, type FileRouter } from "uploadthing/next";
+import { UploadThingError } from "uploadthing/server";
+import axios from 'axios';
+import PDFParser from 'pdf2json';
+
+interface PDFText {
+  R: Array<{ T: string }>;
+}
+
+interface PDFPage {
+  Texts: PDFText[];
+}
+
+interface PDFData {
+  Pages: PDFPage[];
+}
+
+// ...other code...
+
+.onUploadComplete(async ({ file }) => {
+  try {
+    // Download the PDF file
+    const response = await axios.get(file.url, {
+      responseType: 'arraybuffer'
+    });
+    
+    // Parse PDF using pdf2json
+    const pdfParser = new PDFParser();
+    const pdfText = await new Promise<string>((resolve, reject) => {
+      pdfParser.on('pdfParser_dataReady', (pdfData: PDFData) => {
+        const text = decodeURIComponent(pdfData.Pages.map((page: PDFPage) => 
+          page.Texts.map((text: PDFText) => text.R.map((r) => r.T).join(' ')).join(' ')
+        ).join('\n'));
+        resolve(text);
+      });
+      pdfParser.on('pdfParser_dataError', reject);
+      pdfParser.parseBuffer(Buffer.from(response.data));
+    });
+    
+    // Log the parsed content for debugging
+    console.log("Parsed PDF Content:", pdfText);
+    
+    // Return the file data along with parsed content
+    return {
+      ...file,
+      parsedContent: pdfText
+    };
+  } catch (error) {
+    console.error("Error parsing PDF:", error);
+    throw new UploadThingError("Failed to parse PDF");
+  }
+})
+```
+
+## 2. Direct Upload PDF Parsing (for resume builder)
+
+This is from `app/api/uploadthing/direct-upload/route.ts`:
+
+```typescript
+import { NextResponse } from 'next/server';
+import { UTApi } from "uploadthing/server";
+import PDFParser from 'pdf2json';
+
+// Initialize UploadThing API
+const utapi = new UTApi();
+
+export async function POST(request: Request) {
+  try {
+    // Get the file from the request
+    const formData = await request.formData();
+    const file = formData.get("file") as File;
+    
+    // ...validation code...
+    
+    // Convert File to Buffer for processing
+    const buffer = Buffer.from(await file.arrayBuffer());
+    
+    // Extract text from the PDF
+    let parsedContent = "";
+    try {
+      // Parse PDF using pdf2json
+      const pdfParser = new PDFParser();
+      parsedContent = await new Promise<string>((resolve, reject) => {
+        pdfParser.on('pdfParser_dataReady', (pdfData) => {
+          const text = decodeURIComponent(pdfData.Pages.map((page) => 
+            page.Texts.map((text) => text.R.map((r) => r.T).join(' ')).join(' ')
+          ).join('\n'));
+          resolve(text);
+        });
+        pdfParser.on('pdfParser_dataError', reject);
+        pdfParser.parseBuffer(buffer);
+      });
+    } catch (error) {
+      console.error("Error parsing PDF:", error);
+      // Continue with upload even if parsing fails
+    }
+    
+    // Upload file to UploadThing
+    const response = await utapi.uploadFiles(file);
+    
+    // ...response handling...
+    
+    // Return success with the file URL and parsed content
+    return NextResponse.json({
+      url: response.data.url,
+      parsedContent: parsedContent
+    });
+    
+  } catch (error) {
+    console.error("Error uploading file:", error);
+    return NextResponse.json(
+      { error: "Failed to process upload request" },
+      { status: 500 }
+    );
+  }
+}
+```
+
+## 3. PDF Parsing Logic Explained
+
+The core PDF parsing logic is:
+
+```typescript
+// Create a PDF parser instance
+const pdfParser = new PDFParser();
+
+// Set up a promise to handle the asynchronous parsing
+const pdfText = await new Promise<string>((resolve, reject) => {
+  // Set up event listeners for when parsing completes or fails
+  pdfParser.on('pdfParser_dataReady', (pdfData) => {
+    // Transform the parsed data into a plain text string
+    const text = decodeURIComponent(
+      // Map over each page in the PDF
+      pdfData.Pages.map((page) => 
+        // For each page, map over the text elements
+        page.Texts.map((text) => 
+          // For each text element, map over its parts and join them
+          text.R.map((r) => r.T).join(' ')
+        ).join(' ')
+      // Join all pages with newlines
+      ).join('\n')
+    );
+    resolve(text);
+  });
+  
+  // Handle parsing errors
+  pdfParser.on('pdfParser_dataError', reject);
+  
+  // Start parsing the PDF buffer
+  pdfParser.parseBuffer(buffer);
+});
+```
+
+## 4. PDF2JSON Dependency
+
+The application uses the `pdf2json` library for PDF parsing. Here's the relevant dependency in `package.json`:
+
+```json
+{
+  "dependencies": {
+    "pdf2json": "^2.0.1"
+  }
+}
+```
+
+## 5. Understanding the PDF Structure
+
+The PDF structure as understood by pdf2json is:
+
+```typescript
+interface PDFText {
+  R: Array<{ T: string }>; // R stands for "runs" of text, T is the actual text content
+}
+
+interface PDFPage {
+  Texts: PDFText[]; // Each page contains an array of text elements
+}
+
+interface PDFData {
+  Pages: PDFPage[]; // The PDF consists of an array of pages
+}
+```
+
