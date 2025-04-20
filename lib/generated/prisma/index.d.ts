@@ -9519,8 +9519,18 @@ export namespace Prisma {
 
   export type AggregateUpload = {
     _count: UploadCountAggregateOutputType | null
+    _avg: UploadAvgAggregateOutputType | null
+    _sum: UploadSumAggregateOutputType | null
     _min: UploadMinAggregateOutputType | null
     _max: UploadMaxAggregateOutputType | null
+  }
+
+  export type UploadAvgAggregateOutputType = {
+    fileSize: number | null
+  }
+
+  export type UploadSumAggregateOutputType = {
+    fileSize: number | null
   }
 
   export type UploadMinAggregateOutputType = {
@@ -9528,6 +9538,12 @@ export namespace Prisma {
     title: string | null
     fileUrl: string | null
     fileType: string | null
+    description: string | null
+    materialType: string | null
+    subject: string | null
+    fileName: string | null
+    fileSize: number | null
+    fileKey: string | null
     createdAt: Date | null
     updatedAt: Date | null
     userId: string | null
@@ -9538,6 +9554,12 @@ export namespace Prisma {
     title: string | null
     fileUrl: string | null
     fileType: string | null
+    description: string | null
+    materialType: string | null
+    subject: string | null
+    fileName: string | null
+    fileSize: number | null
+    fileKey: string | null
     createdAt: Date | null
     updatedAt: Date | null
     userId: string | null
@@ -9548,6 +9570,12 @@ export namespace Prisma {
     title: number
     fileUrl: number
     fileType: number
+    description: number
+    materialType: number
+    subject: number
+    fileName: number
+    fileSize: number
+    fileKey: number
     createdAt: number
     updatedAt: number
     userId: number
@@ -9555,11 +9583,25 @@ export namespace Prisma {
   }
 
 
+  export type UploadAvgAggregateInputType = {
+    fileSize?: true
+  }
+
+  export type UploadSumAggregateInputType = {
+    fileSize?: true
+  }
+
   export type UploadMinAggregateInputType = {
     id?: true
     title?: true
     fileUrl?: true
     fileType?: true
+    description?: true
+    materialType?: true
+    subject?: true
+    fileName?: true
+    fileSize?: true
+    fileKey?: true
     createdAt?: true
     updatedAt?: true
     userId?: true
@@ -9570,6 +9612,12 @@ export namespace Prisma {
     title?: true
     fileUrl?: true
     fileType?: true
+    description?: true
+    materialType?: true
+    subject?: true
+    fileName?: true
+    fileSize?: true
+    fileKey?: true
     createdAt?: true
     updatedAt?: true
     userId?: true
@@ -9580,6 +9628,12 @@ export namespace Prisma {
     title?: true
     fileUrl?: true
     fileType?: true
+    description?: true
+    materialType?: true
+    subject?: true
+    fileName?: true
+    fileSize?: true
+    fileKey?: true
     createdAt?: true
     updatedAt?: true
     userId?: true
@@ -9624,6 +9678,18 @@ export namespace Prisma {
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
      * 
+     * Select which fields to average
+    **/
+    _avg?: UploadAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to sum
+    **/
+    _sum?: UploadSumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
      * Select which fields to find the minimum value
     **/
     _min?: UploadMinAggregateInputType
@@ -9654,6 +9720,8 @@ export namespace Prisma {
     take?: number
     skip?: number
     _count?: UploadCountAggregateInputType | true
+    _avg?: UploadAvgAggregateInputType
+    _sum?: UploadSumAggregateInputType
     _min?: UploadMinAggregateInputType
     _max?: UploadMaxAggregateInputType
   }
@@ -9663,10 +9731,18 @@ export namespace Prisma {
     title: string
     fileUrl: string
     fileType: string
+    description: string
+    materialType: string
+    subject: string
+    fileName: string
+    fileSize: number
+    fileKey: string
     createdAt: Date
     updatedAt: Date
     userId: string
     _count: UploadCountAggregateOutputType | null
+    _avg: UploadAvgAggregateOutputType | null
+    _sum: UploadSumAggregateOutputType | null
     _min: UploadMinAggregateOutputType | null
     _max: UploadMaxAggregateOutputType | null
   }
@@ -9690,6 +9766,12 @@ export namespace Prisma {
     title?: boolean
     fileUrl?: boolean
     fileType?: boolean
+    description?: boolean
+    materialType?: boolean
+    subject?: boolean
+    fileName?: boolean
+    fileSize?: boolean
+    fileKey?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     userId?: boolean
@@ -9701,6 +9783,12 @@ export namespace Prisma {
     title?: boolean
     fileUrl?: boolean
     fileType?: boolean
+    description?: boolean
+    materialType?: boolean
+    subject?: boolean
+    fileName?: boolean
+    fileSize?: boolean
+    fileKey?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     userId?: boolean
@@ -9712,6 +9800,12 @@ export namespace Prisma {
     title?: boolean
     fileUrl?: boolean
     fileType?: boolean
+    description?: boolean
+    materialType?: boolean
+    subject?: boolean
+    fileName?: boolean
+    fileSize?: boolean
+    fileKey?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     userId?: boolean
@@ -9723,12 +9817,18 @@ export namespace Prisma {
     title?: boolean
     fileUrl?: boolean
     fileType?: boolean
+    description?: boolean
+    materialType?: boolean
+    subject?: boolean
+    fileName?: boolean
+    fileSize?: boolean
+    fileKey?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     userId?: boolean
   }
 
-  export type UploadOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "title" | "fileUrl" | "fileType" | "createdAt" | "updatedAt" | "userId", ExtArgs["result"]["upload"]>
+  export type UploadOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "title" | "fileUrl" | "fileType" | "description" | "materialType" | "subject" | "fileName" | "fileSize" | "fileKey" | "createdAt" | "updatedAt" | "userId", ExtArgs["result"]["upload"]>
   export type UploadInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     user?: boolean | UserDefaultArgs<ExtArgs>
   }
@@ -9749,6 +9849,12 @@ export namespace Prisma {
       title: string
       fileUrl: string
       fileType: string
+      description: string
+      materialType: string
+      subject: string
+      fileName: string
+      fileSize: number
+      fileKey: string
       createdAt: Date
       updatedAt: Date
       userId: string
@@ -10180,6 +10286,12 @@ export namespace Prisma {
     readonly title: FieldRef<"Upload", 'String'>
     readonly fileUrl: FieldRef<"Upload", 'String'>
     readonly fileType: FieldRef<"Upload", 'String'>
+    readonly description: FieldRef<"Upload", 'String'>
+    readonly materialType: FieldRef<"Upload", 'String'>
+    readonly subject: FieldRef<"Upload", 'String'>
+    readonly fileName: FieldRef<"Upload", 'String'>
+    readonly fileSize: FieldRef<"Upload", 'Int'>
+    readonly fileKey: FieldRef<"Upload", 'String'>
     readonly createdAt: FieldRef<"Upload", 'DateTime'>
     readonly updatedAt: FieldRef<"Upload", 'DateTime'>
     readonly userId: FieldRef<"Upload", 'String'>
@@ -12866,6 +12978,12 @@ export namespace Prisma {
     title: 'title',
     fileUrl: 'fileUrl',
     fileType: 'fileType',
+    description: 'description',
+    materialType: 'materialType',
+    subject: 'subject',
+    fileName: 'fileName',
+    fileSize: 'fileSize',
+    fileKey: 'fileKey',
     createdAt: 'createdAt',
     updatedAt: 'updatedAt',
     userId: 'userId'
@@ -13457,6 +13575,12 @@ export namespace Prisma {
     title?: StringFilter<"Upload"> | string
     fileUrl?: StringFilter<"Upload"> | string
     fileType?: StringFilter<"Upload"> | string
+    description?: StringFilter<"Upload"> | string
+    materialType?: StringFilter<"Upload"> | string
+    subject?: StringFilter<"Upload"> | string
+    fileName?: StringFilter<"Upload"> | string
+    fileSize?: IntFilter<"Upload"> | number
+    fileKey?: StringFilter<"Upload"> | string
     createdAt?: DateTimeFilter<"Upload"> | Date | string
     updatedAt?: DateTimeFilter<"Upload"> | Date | string
     userId?: StringFilter<"Upload"> | string
@@ -13468,6 +13592,12 @@ export namespace Prisma {
     title?: SortOrder
     fileUrl?: SortOrder
     fileType?: SortOrder
+    description?: SortOrder
+    materialType?: SortOrder
+    subject?: SortOrder
+    fileName?: SortOrder
+    fileSize?: SortOrder
+    fileKey?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     userId?: SortOrder
@@ -13482,6 +13612,12 @@ export namespace Prisma {
     title?: StringFilter<"Upload"> | string
     fileUrl?: StringFilter<"Upload"> | string
     fileType?: StringFilter<"Upload"> | string
+    description?: StringFilter<"Upload"> | string
+    materialType?: StringFilter<"Upload"> | string
+    subject?: StringFilter<"Upload"> | string
+    fileName?: StringFilter<"Upload"> | string
+    fileSize?: IntFilter<"Upload"> | number
+    fileKey?: StringFilter<"Upload"> | string
     createdAt?: DateTimeFilter<"Upload"> | Date | string
     updatedAt?: DateTimeFilter<"Upload"> | Date | string
     userId?: StringFilter<"Upload"> | string
@@ -13493,12 +13629,20 @@ export namespace Prisma {
     title?: SortOrder
     fileUrl?: SortOrder
     fileType?: SortOrder
+    description?: SortOrder
+    materialType?: SortOrder
+    subject?: SortOrder
+    fileName?: SortOrder
+    fileSize?: SortOrder
+    fileKey?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     userId?: SortOrder
     _count?: UploadCountOrderByAggregateInput
+    _avg?: UploadAvgOrderByAggregateInput
     _max?: UploadMaxOrderByAggregateInput
     _min?: UploadMinOrderByAggregateInput
+    _sum?: UploadSumOrderByAggregateInput
   }
 
   export type UploadScalarWhereWithAggregatesInput = {
@@ -13509,6 +13653,12 @@ export namespace Prisma {
     title?: StringWithAggregatesFilter<"Upload"> | string
     fileUrl?: StringWithAggregatesFilter<"Upload"> | string
     fileType?: StringWithAggregatesFilter<"Upload"> | string
+    description?: StringWithAggregatesFilter<"Upload"> | string
+    materialType?: StringWithAggregatesFilter<"Upload"> | string
+    subject?: StringWithAggregatesFilter<"Upload"> | string
+    fileName?: StringWithAggregatesFilter<"Upload"> | string
+    fileSize?: IntWithAggregatesFilter<"Upload"> | number
+    fileKey?: StringWithAggregatesFilter<"Upload"> | string
     createdAt?: DateTimeWithAggregatesFilter<"Upload"> | Date | string
     updatedAt?: DateTimeWithAggregatesFilter<"Upload"> | Date | string
     userId?: StringWithAggregatesFilter<"Upload"> | string
@@ -14125,6 +14275,12 @@ export namespace Prisma {
     title: string
     fileUrl: string
     fileType: string
+    description?: string
+    materialType?: string
+    subject?: string
+    fileName?: string
+    fileSize?: number
+    fileKey?: string
     createdAt?: Date | string
     updatedAt?: Date | string
     user: UserCreateNestedOneWithoutUploadsInput
@@ -14135,6 +14291,12 @@ export namespace Prisma {
     title: string
     fileUrl: string
     fileType: string
+    description?: string
+    materialType?: string
+    subject?: string
+    fileName?: string
+    fileSize?: number
+    fileKey?: string
     createdAt?: Date | string
     updatedAt?: Date | string
     userId: string
@@ -14145,6 +14307,12 @@ export namespace Prisma {
     title?: StringFieldUpdateOperationsInput | string
     fileUrl?: StringFieldUpdateOperationsInput | string
     fileType?: StringFieldUpdateOperationsInput | string
+    description?: StringFieldUpdateOperationsInput | string
+    materialType?: StringFieldUpdateOperationsInput | string
+    subject?: StringFieldUpdateOperationsInput | string
+    fileName?: StringFieldUpdateOperationsInput | string
+    fileSize?: IntFieldUpdateOperationsInput | number
+    fileKey?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     user?: UserUpdateOneRequiredWithoutUploadsNestedInput
@@ -14155,6 +14323,12 @@ export namespace Prisma {
     title?: StringFieldUpdateOperationsInput | string
     fileUrl?: StringFieldUpdateOperationsInput | string
     fileType?: StringFieldUpdateOperationsInput | string
+    description?: StringFieldUpdateOperationsInput | string
+    materialType?: StringFieldUpdateOperationsInput | string
+    subject?: StringFieldUpdateOperationsInput | string
+    fileName?: StringFieldUpdateOperationsInput | string
+    fileSize?: IntFieldUpdateOperationsInput | number
+    fileKey?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     userId?: StringFieldUpdateOperationsInput | string
@@ -14165,6 +14339,12 @@ export namespace Prisma {
     title: string
     fileUrl: string
     fileType: string
+    description?: string
+    materialType?: string
+    subject?: string
+    fileName?: string
+    fileSize?: number
+    fileKey?: string
     createdAt?: Date | string
     updatedAt?: Date | string
     userId: string
@@ -14175,6 +14355,12 @@ export namespace Prisma {
     title?: StringFieldUpdateOperationsInput | string
     fileUrl?: StringFieldUpdateOperationsInput | string
     fileType?: StringFieldUpdateOperationsInput | string
+    description?: StringFieldUpdateOperationsInput | string
+    materialType?: StringFieldUpdateOperationsInput | string
+    subject?: StringFieldUpdateOperationsInput | string
+    fileName?: StringFieldUpdateOperationsInput | string
+    fileSize?: IntFieldUpdateOperationsInput | number
+    fileKey?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -14184,6 +14370,12 @@ export namespace Prisma {
     title?: StringFieldUpdateOperationsInput | string
     fileUrl?: StringFieldUpdateOperationsInput | string
     fileType?: StringFieldUpdateOperationsInput | string
+    description?: StringFieldUpdateOperationsInput | string
+    materialType?: StringFieldUpdateOperationsInput | string
+    subject?: StringFieldUpdateOperationsInput | string
+    fileName?: StringFieldUpdateOperationsInput | string
+    fileSize?: IntFieldUpdateOperationsInput | number
+    fileKey?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     userId?: StringFieldUpdateOperationsInput | string
@@ -14768,14 +14960,35 @@ export namespace Prisma {
     userId?: SortOrder
   }
 
+  export type IntFilter<$PrismaModel = never> = {
+    equals?: number | IntFieldRefInput<$PrismaModel>
+    in?: number[] | ListIntFieldRefInput<$PrismaModel>
+    notIn?: number[] | ListIntFieldRefInput<$PrismaModel>
+    lt?: number | IntFieldRefInput<$PrismaModel>
+    lte?: number | IntFieldRefInput<$PrismaModel>
+    gt?: number | IntFieldRefInput<$PrismaModel>
+    gte?: number | IntFieldRefInput<$PrismaModel>
+    not?: NestedIntFilter<$PrismaModel> | number
+  }
+
   export type UploadCountOrderByAggregateInput = {
     id?: SortOrder
     title?: SortOrder
     fileUrl?: SortOrder
     fileType?: SortOrder
+    description?: SortOrder
+    materialType?: SortOrder
+    subject?: SortOrder
+    fileName?: SortOrder
+    fileSize?: SortOrder
+    fileKey?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     userId?: SortOrder
+  }
+
+  export type UploadAvgOrderByAggregateInput = {
+    fileSize?: SortOrder
   }
 
   export type UploadMaxOrderByAggregateInput = {
@@ -14783,6 +14996,12 @@ export namespace Prisma {
     title?: SortOrder
     fileUrl?: SortOrder
     fileType?: SortOrder
+    description?: SortOrder
+    materialType?: SortOrder
+    subject?: SortOrder
+    fileName?: SortOrder
+    fileSize?: SortOrder
+    fileKey?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     userId?: SortOrder
@@ -14793,12 +15012,22 @@ export namespace Prisma {
     title?: SortOrder
     fileUrl?: SortOrder
     fileType?: SortOrder
+    description?: SortOrder
+    materialType?: SortOrder
+    subject?: SortOrder
+    fileName?: SortOrder
+    fileSize?: SortOrder
+    fileKey?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     userId?: SortOrder
   }
 
-  export type IntFilter<$PrismaModel = never> = {
+  export type UploadSumOrderByAggregateInput = {
+    fileSize?: SortOrder
+  }
+
+  export type IntWithAggregatesFilter<$PrismaModel = never> = {
     equals?: number | IntFieldRefInput<$PrismaModel>
     in?: number[] | ListIntFieldRefInput<$PrismaModel>
     notIn?: number[] | ListIntFieldRefInput<$PrismaModel>
@@ -14806,7 +15035,12 @@ export namespace Prisma {
     lte?: number | IntFieldRefInput<$PrismaModel>
     gt?: number | IntFieldRefInput<$PrismaModel>
     gte?: number | IntFieldRefInput<$PrismaModel>
-    not?: NestedIntFilter<$PrismaModel> | number
+    not?: NestedIntWithAggregatesFilter<$PrismaModel> | number
+    _count?: NestedIntFilter<$PrismaModel>
+    _avg?: NestedFloatFilter<$PrismaModel>
+    _sum?: NestedIntFilter<$PrismaModel>
+    _min?: NestedIntFilter<$PrismaModel>
+    _max?: NestedIntFilter<$PrismaModel>
   }
 
   export type ReviewCountOrderByAggregateInput = {
@@ -14842,22 +15076,6 @@ export namespace Prisma {
 
   export type ReviewSumOrderByAggregateInput = {
     rating?: SortOrder
-  }
-
-  export type IntWithAggregatesFilter<$PrismaModel = never> = {
-    equals?: number | IntFieldRefInput<$PrismaModel>
-    in?: number[] | ListIntFieldRefInput<$PrismaModel>
-    notIn?: number[] | ListIntFieldRefInput<$PrismaModel>
-    lt?: number | IntFieldRefInput<$PrismaModel>
-    lte?: number | IntFieldRefInput<$PrismaModel>
-    gt?: number | IntFieldRefInput<$PrismaModel>
-    gte?: number | IntFieldRefInput<$PrismaModel>
-    not?: NestedIntWithAggregatesFilter<$PrismaModel> | number
-    _count?: NestedIntFilter<$PrismaModel>
-    _avg?: NestedFloatFilter<$PrismaModel>
-    _sum?: NestedIntFilter<$PrismaModel>
-    _min?: NestedIntFilter<$PrismaModel>
-    _max?: NestedIntFilter<$PrismaModel>
   }
 
   export type TagCountOrderByAggregateInput = {
@@ -15324,6 +15542,14 @@ export namespace Prisma {
     connect?: UserWhereUniqueInput
   }
 
+  export type IntFieldUpdateOperationsInput = {
+    set?: number
+    increment?: number
+    decrement?: number
+    multiply?: number
+    divide?: number
+  }
+
   export type UserUpdateOneRequiredWithoutUploadsNestedInput = {
     create?: XOR<UserCreateWithoutUploadsInput, UserUncheckedCreateWithoutUploadsInput>
     connectOrCreate?: UserCreateOrConnectWithoutUploadsInput
@@ -15336,14 +15562,6 @@ export namespace Prisma {
     create?: XOR<UserCreateWithoutReviewsInput, UserUncheckedCreateWithoutReviewsInput>
     connectOrCreate?: UserCreateOrConnectWithoutReviewsInput
     connect?: UserWhereUniqueInput
-  }
-
-  export type IntFieldUpdateOperationsInput = {
-    set?: number
-    increment?: number
-    decrement?: number
-    multiply?: number
-    divide?: number
   }
 
   export type UserUpdateOneRequiredWithoutReviewsNestedInput = {
@@ -15828,6 +16046,12 @@ export namespace Prisma {
     title: string
     fileUrl: string
     fileType: string
+    description?: string
+    materialType?: string
+    subject?: string
+    fileName?: string
+    fileSize?: number
+    fileKey?: string
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -15837,6 +16061,12 @@ export namespace Prisma {
     title: string
     fileUrl: string
     fileType: string
+    description?: string
+    materialType?: string
+    subject?: string
+    fileName?: string
+    fileSize?: number
+    fileKey?: string
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -16067,6 +16297,12 @@ export namespace Prisma {
     title?: StringFilter<"Upload"> | string
     fileUrl?: StringFilter<"Upload"> | string
     fileType?: StringFilter<"Upload"> | string
+    description?: StringFilter<"Upload"> | string
+    materialType?: StringFilter<"Upload"> | string
+    subject?: StringFilter<"Upload"> | string
+    fileName?: StringFilter<"Upload"> | string
+    fileSize?: IntFilter<"Upload"> | number
+    fileKey?: StringFilter<"Upload"> | string
     createdAt?: DateTimeFilter<"Upload"> | Date | string
     updatedAt?: DateTimeFilter<"Upload"> | Date | string
     userId?: StringFilter<"Upload"> | string
@@ -16721,6 +16957,12 @@ export namespace Prisma {
     title: string
     fileUrl: string
     fileType: string
+    description?: string
+    materialType?: string
+    subject?: string
+    fileName?: string
+    fileSize?: number
+    fileKey?: string
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -16846,6 +17088,12 @@ export namespace Prisma {
     title?: StringFieldUpdateOperationsInput | string
     fileUrl?: StringFieldUpdateOperationsInput | string
     fileType?: StringFieldUpdateOperationsInput | string
+    description?: StringFieldUpdateOperationsInput | string
+    materialType?: StringFieldUpdateOperationsInput | string
+    subject?: StringFieldUpdateOperationsInput | string
+    fileName?: StringFieldUpdateOperationsInput | string
+    fileSize?: IntFieldUpdateOperationsInput | number
+    fileKey?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -16855,6 +17103,12 @@ export namespace Prisma {
     title?: StringFieldUpdateOperationsInput | string
     fileUrl?: StringFieldUpdateOperationsInput | string
     fileType?: StringFieldUpdateOperationsInput | string
+    description?: StringFieldUpdateOperationsInput | string
+    materialType?: StringFieldUpdateOperationsInput | string
+    subject?: StringFieldUpdateOperationsInput | string
+    fileName?: StringFieldUpdateOperationsInput | string
+    fileSize?: IntFieldUpdateOperationsInput | number
+    fileKey?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -16864,6 +17118,12 @@ export namespace Prisma {
     title?: StringFieldUpdateOperationsInput | string
     fileUrl?: StringFieldUpdateOperationsInput | string
     fileType?: StringFieldUpdateOperationsInput | string
+    description?: StringFieldUpdateOperationsInput | string
+    materialType?: StringFieldUpdateOperationsInput | string
+    subject?: StringFieldUpdateOperationsInput | string
+    fileName?: StringFieldUpdateOperationsInput | string
+    fileSize?: IntFieldUpdateOperationsInput | number
+    fileKey?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }

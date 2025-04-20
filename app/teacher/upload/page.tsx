@@ -13,15 +13,28 @@ import { motion } from 'framer-motion';
 import { Upload, FileType, FileText, Image, BookText, PlusCircle, Check } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';
+import { UploadDropzone } from '@/utils/uploadthing';
+import type { UploadFileResponse } from 'uploadthing/client';
+import { toast } from 'sonner';
+import { prisma } from '@/lib/prisma';
 
+// Define types for the upload response
+interface UploadedFile {
+  fileUrl: string;
+  fileKey: string;
+  fileName: string;
+  fileSize: number;
+  fileType: string;
+}
 
 const TeacherUpload = () => {
   const [isUploading, setIsUploading] = useState(false);
-  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [uploadedFile, setUploadedFile] = useState<UploadedFile | null>(null);
   const [materialTitle, setMaterialTitle] = useState('');
   const [materialDescription, setMaterialDescription] = useState('');
   const [materialType, setMaterialType] = useState('notes');
   const [materialSubject, setMaterialSubject] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
 
   // Authentication check
@@ -41,32 +54,59 @@ const TeacherUpload = () => {
     return null;
   }
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-    if (files && files.length > 0) {
-      setUploadedFile(files[0]);
-      
-      // Simulate file upload
-      setIsUploading(true);
-      setTimeout(() => {
-        setIsUploading(false);
-      }, 1500);
-    }
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitted(true);
     
-    // Reset form after a delay
-    setTimeout(() => {
-      setIsSubmitted(false);
-      setUploadedFile(null);
-      setMaterialTitle('');
-      setMaterialDescription('');
-      setMaterialType('notes');
-      setMaterialSubject('');
-    }, 3000);
+    if (!uploadedFile) {
+      toast.error("Please upload a file first");
+      return;
+    }
+    
+    setIsSubmitting(true);
+    
+    try {
+      // Call API to save the material to the database
+      const response = await fetch('/api/materials', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          title: materialTitle,
+          description: materialDescription,
+          type: materialType,
+          subject: materialSubject,
+          fileUrl: uploadedFile.fileUrl,
+          fileType: uploadedFile.fileType,
+          fileName: uploadedFile.fileName,
+          fileSize: uploadedFile.fileSize,
+          fileKey: uploadedFile.fileKey,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save material');
+      }
+
+      // Success!
+      setIsSubmitted(true);
+      toast.success("Material uploaded successfully!");
+      
+      // Reset form after a delay
+      setTimeout(() => {
+        setIsSubmitted(false);
+        setUploadedFile(null);
+        setMaterialTitle('');
+        setMaterialDescription('');
+        setMaterialType('notes');
+        setMaterialSubject('');
+      }, 3000);
+    } catch (error) {
+      console.error('Error saving material:', error);
+      toast.error("Failed to save material. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -89,31 +129,44 @@ const TeacherUpload = () => {
               <Card className="border-dashed">
                 <CardContent className="pt-6">
                   <div className="flex flex-col items-center justify-center py-10 px-6">
-                    <div className="mb-4 bg-primary/10 p-4 rounded-full">
-                      <Upload className="h-8 w-8 text-primary" />
-                    </div>
-                    
                     {!uploadedFile ? (
                       <>
-                        <h3 className="text-lg font-medium mb-2">Drag & drop your files here</h3>
-                        <p className="text-sm text-muted-foreground text-center mb-4">
-                          Supports PDF, images, and document files up to 20MB
-                        </p>
-                        <div className="relative">
-                          <Button>Select File</Button>
-                          <input 
-                            type="file" 
-                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                            onChange={handleFileUpload}
-                            accept=".pdf,.png,.jpg,.jpeg,.txt,.doc,.docx,.ppt,.pptx"
-                          />
-                        </div>
+                        <UploadDropzone
+                          endpoint="teacherDocumentUploader"
+                          onUploadBegin={() => {
+                            setIsUploading(true);
+                          }}
+                          onUploadProgress={(progress: number) => {
+                            console.log(`Upload progress: ${progress}%`);
+                          }}
+                          onClientUploadComplete={(res?: UploadFileResponse[]) => {
+                            setIsUploading(false);
+                            if (res && res.length > 0) {
+                              setUploadedFile({
+                                fileUrl: res[0].url,
+                                fileKey: res[0].key,
+                                fileName: res[0].name,
+                                fileSize: res[0].size,
+                                fileType: '' // No mime type in UploadFileResponse, using empty string
+                              });
+                              toast.success("File uploaded successfully!");
+                            }
+                          }}
+                          onUploadError={(error: Error) => {
+                            setIsUploading(false);
+                            toast.error(`Error uploading file: ${error.message}`);
+                          }}
+                          className="w-full"
+                        />
                       </>
                     ) : (
                       <>
+                        <div className="mb-4 bg-primary/10 p-4 rounded-full">
+                          <Upload className="h-8 w-8 text-primary" />
+                        </div>
                         <h3 className="text-lg font-medium mb-2">File uploaded successfully</h3>
                         <p className="text-sm text-muted-foreground text-center mb-4">
-                          {uploadedFile.name} • {(uploadedFile.size / 1024 / 1024).toFixed(2)} MB
+                          {uploadedFile.fileName} • {(uploadedFile.fileSize / 1024 / 1024).toFixed(2)} MB
                         </p>
                         <div className="flex space-x-3">
                           <Button
@@ -123,15 +176,6 @@ const TeacherUpload = () => {
                           >
                             Remove
                           </Button>
-                          <div className="relative">
-                            <Button type="button">Change File</Button>
-                            <input 
-                              type="file" 
-                              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                              onChange={handleFileUpload}
-                              accept=".pdf,.png,.jpg,.jpeg,.txt,.doc,.docx,.ppt,.pptx"
-                            />
-                          </div>
                         </div>
                       </>
                     )}
@@ -323,10 +367,12 @@ const TeacherUpload = () => {
             <Button type="button" variant="outline">Save as Draft</Button>
             <Button 
               type="submit" 
-              disabled={!uploadedFile || !materialTitle || !materialDescription || !materialSubject || isSubmitted}
+              disabled={!uploadedFile || !materialTitle || !materialDescription || !materialSubject || isSubmitting || isSubmitted}
               className="gap-2"
             >
-              {isSubmitted ? (
+              {isSubmitting ? (
+                "Uploading..."
+              ) : isSubmitted ? (
                 <>
                   <Check className="h-4 w-4" />
                   Material Uploaded

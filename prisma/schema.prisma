@@ -102,14 +102,20 @@ model Revision {
 }
 
 model Upload {
-  id        String   @id @default(cuid())
-  title     String
-  fileUrl   String
-  fileType  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id            String   @id @default(cuid())
+  title         String
+  fileUrl       String
+  fileType      String
+  description   String   @default("") @db.Text
+  materialType  String   @default("notes")
+  subject       String   @default("other")
+  fileName      String   @default("")
+  fileSize      Int      @default(0)
+  fileKey       String   @default("")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Review {
