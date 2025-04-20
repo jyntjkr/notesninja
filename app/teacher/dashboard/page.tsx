@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';
 import PageHeader from '@/components/shared/PageHeader';
@@ -11,19 +11,28 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { FileText, Users, Clipboard, GraduationCap, Clock } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { Icons } from '@/components/shared/icons';
 
 export default function TeacherDashboard() {
   // Authentication check
-  const { isAuthenticated, isTeacher } = useAuth();
+  const { isAuthenticated, isTeacher, status, roleConfirmed } = useAuth();
   const router = useRouter();
+  const [isLoading, setIsLoading] = useState(true);
   
   React.useEffect(() => {
-    if (!isAuthenticated) {
-      router.push('/auth');
-    } else if (!isTeacher) {
-      router.push('/student/dashboard');
+    // Only run redirects after the session has loaded
+    if (status !== "loading") {
+      setIsLoading(false);
+      
+      if (!isAuthenticated) {
+        router.push('/auth');
+      } else if (!roleConfirmed) {
+        router.push('/auth/role-select');
+      } else if (!isTeacher) {
+        router.push('/student/dashboard');
+      }
     }
-  }, [isAuthenticated, isTeacher, router]);
+  }, [isAuthenticated, isTeacher, roleConfirmed, router, status]);
 
   // Animation variants
   const container = {
@@ -41,9 +50,16 @@ export default function TeacherDashboard() {
     show: { opacity: 1, y: 0 }
   };
 
-  // Don't render until authenticated
-  if (!isAuthenticated || !isTeacher) {
-    return null;
+  // Don't render until authenticated and session is loaded
+  if (isLoading || !isAuthenticated || !isTeacher || !roleConfirmed) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center">
+          <Icons.spinner className="h-8 w-8 animate-spin mx-auto mb-4" />
+          <h2 className="text-lg font-medium">Loading dashboard...</h2>
+        </div>
+      </div>
+    );
   }
 
   return (

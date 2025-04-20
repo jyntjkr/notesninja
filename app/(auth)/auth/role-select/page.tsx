@@ -58,9 +58,11 @@ export default function RoleSelectPage() {
 
       toast.success("Role set successfully!");
 
-      // Redirect based on role
+      // Determine the redirect path based on selected role
       const redirectPath = role.toLowerCase() === "teacher" ? "/teacher/dashboard" : "/student/dashboard";
-      router.push(redirectPath);
+      
+      // Use hard navigation (full page reload) to ensure the session is fully refreshed
+      window.location.href = redirectPath;
     } catch (error: any) {
       console.error("Role selection error:", error);
       toast.error(error.message || "Something went wrong");
