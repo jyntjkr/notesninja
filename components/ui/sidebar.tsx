@@ -292,18 +292,15 @@ function SidebarInset({ className, ...props }: React.ComponentProps<"main">) {
   const { state, isMobile, openMobile } = useSidebar();
   
   return (
-    <>
-      <main
-        className={cn(
-          "flex-1 transition-all duration-300 p-6",
-          isMobile ? "pt-[4.5rem] ml-0" : // Increase top padding on mobile for more space below navbar
-          (state === "expanded" ? "ml-[16rem]" : "ml-[4rem]"), // On desktop, adjust margin based on sidebar state
-          className
-        )}
-        {...props}
-      />
-      <SidebarMobileToggle />
-    </>
+    <main
+      className={cn(
+        "flex-1 transition-all duration-300 p-6",
+        isMobile ? "pt-[4.5rem] ml-0" : // Increase top padding on mobile for more space below navbar
+        (state === "expanded" ? "ml-[16rem]" : "ml-[4rem]"), // On desktop, adjust margin based on sidebar state
+        className
+      )}
+      {...props}
+    />
   );
 }
 
