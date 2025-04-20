@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { updateUserRole } from "@/lib/auth";
 import { getServerSession } from "next-auth";
 import { prisma } from "@/lib/prisma";
+import { authOptions } from "@/lib/auth-options";
 
 export async function POST(request: Request) {
   try {
@@ -44,7 +45,7 @@ export async function POST(request: Request) {
     const result = await updateUserRole(email, normalizedRole);
     
     // Get current session to verify the user
-    const session = await getServerSession();
+    const session = await getServerSession(authOptions);
     if (!session?.user) {
       console.log('No session user found, but role update succeeded');
     } else if (session.user.email !== email) {

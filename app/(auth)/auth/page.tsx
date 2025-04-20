@@ -9,38 +9,48 @@ import { Icons } from "@/components/shared/icons";
 
 function AuthContent() {
   const router = useRouter();
-  const { data: session, status } = useSession();
+  const { data: session, status, update } = useSession();
   const [isLoading, setIsLoading] = useState(false);
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") || "/";
   const error = searchParams.get("error");
 
+  // Force session update on mount
   useEffect(() => {
+    if (status === "loading") {
+      update(); // Ensure session is up-to-date
+    }
+  }, [status, update]);
+
+  useEffect(() => {
+    console.log("Auth state:", { status, session, callbackUrl, error });
+    
     if (status === "authenticated") {
       // Check if user has confirmed role
       if (session?.user?.roleConfirmed) {
         // If role is confirmed, redirect to appropriate dashboard
-        const redirectPath = session.user.role?.toLowerCase() === "teacher" 
+        const redirectPath = session.user.role?.toUpperCase() === "TEACHER" 
           ? "/teacher/dashboard" 
           : "/student/dashboard";
+        console.log(`Redirecting to ${redirectPath}`);
+        
+        // Use router for SPA navigation
         router.push(redirectPath);
       } else {
         // If role is not confirmed, redirect to role selection
+        console.log("Redirecting to role selection");
         router.push("/auth/role-select");
       }
     }
   }, [session, status, router]);
 
-  const handleGoogleSignIn = async () => {
-    setIsLoading(true);
+  // Handler for Google login
+  const handleGoogleLogin = async () => {
     try {
-      // Set flag to indicate authentication flow has started
-      // This helps track new sign ups vs returning users
-      localStorage.setItem('auth_flow_started', 'true');
-      
+      setIsLoading(true);
       await signIn("google", { callbackUrl });
     } catch (error) {
-      console.error("Sign in error:", error);
+      console.error("Login error:", error);
     } finally {
       setIsLoading(false);
     }
@@ -52,34 +62,49 @@ function AuthContent() {
         <CardHeader className="space-y-1 text-center">
           <CardTitle className="text-2xl font-bold">Welcome to NoteNinja</CardTitle>
           <CardDescription>
-            Sign in to access your notes, flashcards, and revision materials
+            Sign in with your Google account to continue
           </CardDescription>
         </CardHeader>
+        
         <CardContent className="grid gap-4">
           {error && (
-            <div className="bg-red-50 p-4 rounded-md mb-4 text-red-500 text-sm">
-              {error === "OAuthAccountNotLinked"
-                ? "Email already in use with a different provider."
-                : "Authentication error. Please try again."}
+            <div className="bg-red-50 text-red-500 p-3 rounded-md text-sm">
+              {error === "AccessDenied" ? (
+                "You do not have permission to access this application."
+              ) : (
+                "An error occurred during sign in. Please try again."
+              )}
             </div>
           )}
 
           <Button
             variant="outline"
-            onClick={handleGoogleSignIn}
+            type="button"
             disabled={isLoading}
-            className="w-full flex items-center justify-center gap-2"
+            onClick={handleGoogleLogin}
+            className="w-full"
           >
             {isLoading ? (
-              <Icons.spinner className="h-4 w-4 animate-spin" />
+              <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
             ) : (
-              <Icons.google className="h-4 w-4" />
+              <Icons.google className="mr-2 h-4 w-4" />
             )}
             Sign in with Google
           </Button>
         </CardContent>
-        <CardFooter className="flex justify-center text-sm text-gray-500">
-          By signing in, you agree to our terms and privacy policy.
+        
+        <CardFooter>
+          <p className="px-8 text-center text-sm text-muted-foreground">
+            By clicking continue, you agree to our{" "}
+            <a href="/terms" className="underline underline-offset-4 hover:text-primary">
+              Terms of Service
+            </a>{" "}
+            and{" "}
+            <a href="/privacy" className="underline underline-offset-4 hover:text-primary">
+              Privacy Policy
+            </a>
+            .
+          </p>
         </CardFooter>
       </Card>
     </div>
@@ -88,11 +113,7 @@ function AuthContent() {
 
 export default function AuthPage() {
   return (
-    <Suspense fallback={
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <Icons.spinner className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    }>
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><Icons.spinner className="h-10 w-10 animate-spin" /></div>}>
       <AuthContent />
     </Suspense>
   );

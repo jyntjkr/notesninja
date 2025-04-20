@@ -10,7 +10,7 @@ import AppSidebar from "@/components/layout/AppSidebar";
 import MobileTopBar from "@/components/layout/MobileTopBar";
 import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 // Create a client
 const queryClient = new QueryClient();
@@ -45,26 +45,31 @@ function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isStudent, isTeacher, roleConfirmed } = useAuth();
   const isMobile = useIsMobile();
   const initialMountRef = useRef(true);
+  const [pathname, setPathname] = useState<string>('');
+  
+  // Update path on client side
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setPathname(window.location.pathname);
+    }
+  }, []);
+  
+  // Check if current path is an auth path
+  const isAuthPath = pathname.startsWith('/auth');
 
   // Log auth status on first mount
   useEffect(() => {
     if (initialMountRef.current) {
       initialMountRef.current = false;
-      // Only log on first mount
-      console.log('AuthenticatedLayout - auth status:', { 
-        isAuthenticated, 
-        isStudent, 
-        isTeacher, 
-        roleConfirmed 
-      });
+      console.log('AuthenticatedLayout -', { isAuthenticated, isAuthPath, pathname });
     }
-  }, [isAuthenticated, isStudent, isTeacher, roleConfirmed]);
+  }, [isAuthenticated, pathname, isAuthPath]);
 
   // Determine user role from boolean flags
   const userRoleString = isTeacher ? 'teacher' : 'student';
 
-  // Always render children - either directly or within the sidebar layout
-  if (!isAuthenticated || !roleConfirmed) {
+  // Don't show sidebar on auth pages or when not authenticated
+  if (isAuthPath || !isAuthenticated || !roleConfirmed) {
     return <>{children}</>;
   }
 

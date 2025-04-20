@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { prisma } from "@/lib/prisma";
+import { authOptions } from "@/lib/auth-options";
 
 export async function POST(request: Request) {
   try {
-    const session = await getServerSession();
+    const session = await getServerSession(authOptions);
     console.log("Session in role update API:", JSON.stringify(session, null, 2));
     
     if (!session || !session.user) {
@@ -81,6 +82,27 @@ export async function POST(request: Request) {
     console.error("Error updating user role:", error);
     return NextResponse.json(
       { error: "Failed to update user role", details: error.message },
+      { status: 500 }
+    );
+  }
+}
+
+export async function GET() {
+  try {
+    const session = await getServerSession(authOptions);
+    
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+    }
+    
+    return NextResponse.json({
+      role: session.user.role || null,
+      roleConfirmed: session.user.roleConfirmed || false,
+      email: session.user.email
+    });
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "An error occurred" },
       { status: 500 }
     );
   }

@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { prisma } from "@/lib/prisma";
+import { authOptions } from "@/lib/auth-options";
 
-export async function GET(request: Request) {
+export async function GET() {
   try {
     // Get session
-    const session = await getServerSession();
+    const session = await getServerSession(authOptions);
     
     // Get database info
     const userCount = await prisma.user.count();

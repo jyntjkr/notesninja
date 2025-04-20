@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth-options";
 
 /**
  * Update a user's role in the database
@@ -34,7 +35,7 @@ export async function updateUserRole(email: string, role: string) {
  */
 export async function getCurrentUser() {
   try {
-    const session = await getServerSession();
+    const session = await getServerSession(authOptions);
     
     if (!session?.user?.email) {
       return null;
