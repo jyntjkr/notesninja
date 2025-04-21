@@ -146,6 +146,7 @@ const TeacherUpload = () => {
       
       <form onSubmit={handleSubmit} className="w-full max-w-full overflow-hidden px-0">
         <div className="grid md:grid-cols-2 gap-6 w-full">
+          {/* File Upload Section - Left side on desktop */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -155,7 +156,7 @@ const TeacherUpload = () => {
             <div className="space-y-6 w-full">
               <h2 className="text-lg font-medium">1. Select File</h2>
               
-              <Card className="w-full">
+              <Card className="w-full h-full">
                 <CardContent className="pt-6 px-3 sm:px-6">
                   {!uploadedFile ? (
                     <div className="min-h-[200px] max-h-[300px] w-full">
@@ -220,7 +221,17 @@ const TeacherUpload = () => {
                   )}
                 </CardContent>
               </Card>
+            </div>
+          </motion.div>
               
+          {/* Material Details Section - Right side on desktop */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.1 }}
+            className="w-full"
+          >
+            <div className="space-y-6 w-full">
               <h2 className="text-lg font-medium">2. Material Details</h2>
               
               <Card className="w-full">

@@ -455,24 +455,47 @@ const TeacherTestGenerator = () => {
               <Separator />
               
               <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <h3 className="text-base font-medium">Question Configuration</h3>
-                  <div className="text-sm text-muted-foreground">
-                    Total Questions: {getQuestionTotal()}
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 sm:gap-0">
+                  <h3 className="text-base font-semibold flex items-center gap-2">
+                    <CheckCircle className="h-5 w-5" />
+                    Question Configuration
+                  </h3>
+                  <div className="text-sm font-medium px-3 py-1.5 bg-primary/10 text-primary rounded-md inline-flex items-center self-start sm:self-center">
+                    <span>Total Questions: {getQuestionTotal()}</span>
                   </div>
                 </div>
                 
                 <div className="space-y-4">
                   {questions.map((question, index) => (
-                    <div key={index} className="flex items-start gap-4 p-3 border rounded-md">
-                      <div className="grid flex-1 grid-cols-1 sm:grid-cols-3 gap-4">
-                        <div className="space-y-1">
-                          <Label htmlFor={`type-${index}`} className="text-xs">Question Type</Label>
+                    <div key={index} className="border rounded-md overflow-hidden">
+                      {/* Question header with remove button */}
+                      <div className="bg-muted px-3 py-2 flex items-center justify-between">
+                        <span className="font-medium text-sm">{question.type === 'mcq' ? 'Multiple Choice' : 
+                            question.type === 'short' ? 'Short Answer' : 
+                            question.type === 'long' ? 'Long Answer' : 
+                            question.type === 'true_false' ? 'True/False' : 'Matching'}</span>
+                        <Button 
+                          type="button" 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => handleRemoveQuestion(index)}
+                          disabled={questions.length === 1}
+                          className="h-8 w-8 p-0"
+                        >
+                          <Minus className="h-4 w-4" />
+                          <span className="sr-only">Remove</span>
+                        </Button>
+                      </div>
+                      
+                      {/* Question content */}
+                      <div className="p-3 space-y-3">
+                        <div className="space-y-2">
+                          <Label htmlFor={`type-${index}`} className="text-sm">Question Type</Label>
                           <Select 
                             value={question.type} 
                             onValueChange={(value) => handleQuestionTypeChange(value, index)}
                           >
-                            <SelectTrigger id={`type-${index}`}>
+                            <SelectTrigger id={`type-${index}`} className="w-full">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -485,61 +508,52 @@ const TeacherTestGenerator = () => {
                           </Select>
                         </div>
                         
-                        <div className="space-y-1">
-                          <Label htmlFor={`quantity-${index}`} className="text-xs">Number of Questions</Label>
-                          <Select 
-                            value={question.quantity.toString()} 
-                            onValueChange={(value) => handleQuestionQuantityChange(value, index)}
-                          >
-                            <SelectTrigger id={`quantity-${index}`}>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
-                                <SelectItem key={num} value={num.toString()}>{num}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        
-                        <div className="space-y-1">
-                          <Label htmlFor={`difficulty-${index}`} className="text-xs">Difficulty Level</Label>
-                          <Select 
-                            value={question.difficulty} 
-                            onValueChange={(value) => handleQuestionDifficultyChange(value, index)}
-                          >
-                            <SelectTrigger id={`difficulty-${index}`}>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="easy">Easy</SelectItem>
-                              <SelectItem value="medium">Medium</SelectItem>
-                              <SelectItem value="hard">Hard</SelectItem>
-                            </SelectContent>
-                          </Select>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-2">
+                            <Label htmlFor={`quantity-${index}`} className="text-sm">Number</Label>
+                            <Select 
+                              value={question.quantity.toString()} 
+                              onValueChange={(value) => handleQuestionQuantityChange(value, index)}
+                            >
+                              <SelectTrigger id={`quantity-${index}`} className="w-full">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
+                                  <SelectItem key={num} value={num.toString()}>{num}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <Label htmlFor={`difficulty-${index}`} className="text-sm">Difficulty</Label>
+                            <Select 
+                              value={question.difficulty} 
+                              onValueChange={(value) => handleQuestionDifficultyChange(value, index)}
+                            >
+                              <SelectTrigger id={`difficulty-${index}`} className="w-full">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="easy">Easy</SelectItem>
+                                <SelectItem value="medium">Medium</SelectItem>
+                                <SelectItem value="hard">Hard</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
                         </div>
                       </div>
-                      
-                      <Button 
-                        type="button" 
-                        variant="ghost" 
-                        size="icon"
-                        onClick={() => handleRemoveQuestion(index)}
-                        disabled={questions.length === 1}
-                      >
-                        <Minus className="h-4 w-4" />
-                      </Button>
                     </div>
                   ))}
                   
                   <Button 
                     type="button" 
                     variant="outline" 
-                    size="sm" 
-                    className="w-full"
+                    className="w-full flex items-center justify-center gap-2 h-12"
                     onClick={handleAddQuestion}
                   >
-                    <Plus className="h-4 w-4 mr-2" />
+                    <Plus className="h-5 w-5" />
                     Add Question Type
                   </Button>
                 </div>
