@@ -380,7 +380,7 @@ const TeacherTestGenerator = () => {
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>
-                            <p>Refresh material list to see newly processed materials</p>
+                            <p>Refresh to see newly processed materials</p>
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>

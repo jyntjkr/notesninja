@@ -144,54 +144,57 @@ const TeacherUpload = () => {
         description="Share notes, slides, worksheets, and other resources with your students."
       />
       
-      <form onSubmit={handleSubmit}>
-        <div className="grid md:grid-cols-2 gap-6">
+      <form onSubmit={handleSubmit} className="w-full max-w-full overflow-hidden px-0">
+        <div className="grid md:grid-cols-2 gap-6 w-full">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
+            className="w-full"
           >
-            <div className="space-y-6">
+            <div className="space-y-6 w-full">
               <h2 className="text-lg font-medium">1. Select File</h2>
               
-              <Card>
-                <CardContent className="pt-6">
+              <Card className="w-full">
+                <CardContent className="pt-6 px-3 sm:px-6">
                   {!uploadedFile ? (
-                    <UploadDropzone 
-                      endpoint="teacherDocumentUploader"
-                      onUploadBegin={() => setIsUploading(true)}
-                      onClientUploadComplete={(res) => {
-                        if (res && res.length > 0) {
-                          // Determine file type from extension
-                          const fileName = res[0].name;
-                          let fileType = 'application/octet-stream';
-                          
-                          if (fileName) {
-                            const extension = fileName.split('.').pop()?.toLowerCase();
-                            if (extension === 'pdf') {
-                              fileType = 'application/pdf';
-                            } else if (['doc', 'docx'].includes(extension || '')) {
-                              fileType = 'application/msword';
-                            } else if (['jpg', 'jpeg', 'png'].includes(extension || '')) {
-                              fileType = `image/${extension}`;
-                            } else if (extension === 'txt') {
-                              fileType = 'text/plain';
+                    <div className="min-h-[200px] max-h-[300px] w-full">
+                      <UploadDropzone 
+                        endpoint="teacherDocumentUploader"
+                        onUploadBegin={() => setIsUploading(true)}
+                        onClientUploadComplete={(res) => {
+                          if (res && res.length > 0) {
+                            // Determine file type from extension
+                            const fileName = res[0].name;
+                            let fileType = 'application/octet-stream';
+                            
+                            if (fileName) {
+                              const extension = fileName.split('.').pop()?.toLowerCase();
+                              if (extension === 'pdf') {
+                                fileType = 'application/pdf';
+                              } else if (['doc', 'docx'].includes(extension || '')) {
+                                fileType = 'application/msword';
+                              } else if (['jpg', 'jpeg', 'png'].includes(extension || '')) {
+                                fileType = `image/${extension}`;
+                              } else if (extension === 'txt') {
+                                fileType = 'text/plain';
+                              }
                             }
+                            
+                            handleFileUploaded({
+                              fileUrl: res[0].url,
+                              fileKey: res[0].key,
+                              fileName: res[0].name,
+                              fileSize: res[0].size,
+                              fileType: fileType
+                            });
                           }
-                          
-                          handleFileUploaded({
-                            fileUrl: res[0].url,
-                            fileKey: res[0].key,
-                            fileName: res[0].name,
-                            fileSize: res[0].size,
-                            fileType: fileType
-                          });
-                        }
-                      }}
-                      onUploadError={(error) => {
-                        toast.error(`Upload error: ${error.message}`);
-                      }}
-                    />
+                        }}
+                        onUploadError={(error) => {
+                          toast.error(`Upload error: ${error.message}`);
+                        }}
+                      />
+                    </div>
                   ) : (
                     <div className="border rounded-md p-4 relative">
                       <Button 
@@ -205,9 +208,9 @@ const TeacherUpload = () => {
                       </Button>
                       
                       <div className="flex items-center space-x-4">
-                        <FileText className="h-10 w-10 text-primary" />
-                        <div className="flex-1 space-y-1">
-                          <div className="font-medium">{uploadedFile.fileName}</div>
+                        <FileText className="h-10 w-10 text-primary flex-shrink-0" />
+                        <div className="flex-1 space-y-1 min-w-0">
+                          <div className="font-medium truncate">{uploadedFile.fileName}</div>
                           <div className="text-xs text-muted-foreground">
                             {uploadedFile.fileType} • {(uploadedFile.fileSize / (1024 * 1024)).toFixed(2)} MB
                           </div>
@@ -220,9 +223,9 @@ const TeacherUpload = () => {
               
               <h2 className="text-lg font-medium">2. Material Details</h2>
               
-              <Card>
-                <CardContent className="pt-6 space-y-4">
-                  <div className="space-y-2">
+              <Card className="w-full">
+                <CardContent className="pt-6 space-y-4 px-3 sm:px-6">
+                  <div className="space-y-2 w-full">
                     <Label htmlFor="title">Title</Label>
                     <Input 
                       id="title" 
@@ -233,7 +236,7 @@ const TeacherUpload = () => {
                     />
                   </div>
                   
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="type">Material Type</Label>
                       <Select 
@@ -305,6 +308,7 @@ const TeacherUpload = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.2 }}
+          className="w-full"
         >
           <Separator className="my-6" />
           
@@ -321,12 +325,11 @@ const TeacherUpload = () => {
             </Alert>
           )}
           
-          <div className="mt-8 flex justify-end gap-3">
-            <Button type="button" variant="outline">Save as Draft</Button>
+          <div className="mt-6 flex justify-center sm:justify-end">
             <Button 
               type="submit" 
               disabled={!uploadedFile || !materialTitle || !materialDescription || !materialSubject || isSubmitting || isSubmitted}
-              className="gap-2"
+              className="gap-2 w-full sm:w-auto"
             >
               {isSubmitting ? (
                 "Uploading..."

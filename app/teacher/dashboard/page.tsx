@@ -372,7 +372,7 @@ export default function TeacherDashboard() {
               <Clipboard className="h-8 w-8 text-muted-foreground mb-3" />
               <h3 className="text-base font-medium mb-2">No tests created yet</h3>
               <p className="text-sm text-muted-foreground mb-3">Start by creating your first test for students</p>
-              <Button size="sm">Create New Test</Button>
+              <Button size="sm" onClick={() => router.push('/teacher/test-generator')}>Create New Test</Button>
             </div>
           </CardContent>
         </Card>

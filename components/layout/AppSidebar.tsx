@@ -36,7 +36,7 @@ interface AppSidebarProps {
  * Shows different navigation links based on user role
  */
 const AppSidebar = ({ userRole: propUserRole }: AppSidebarProps) => {
-  const { state, toggleSidebar, isMobile, openMobile } = useSidebar();
+  const { state, toggleSidebar, isMobile, openMobile, setOpenMobile } = useSidebar();
   const isCollapsed = state === 'collapsed' && !isMobile;
   const pathname = usePathname();
   const router = useRouter();
@@ -138,6 +138,7 @@ const AppSidebar = ({ userRole: propUserRole }: AppSidebarProps) => {
               <Link
                 key={link.path}
                 href={link.path}
+                onClick={() => isMobile && openMobile && setOpenMobile(false)}
                 className={cn(
                   "flex items-center py-2.5 rounded-md text-sm font-medium transition-colors",
                   showFullContent ? "px-3" : "justify-center px-2",
