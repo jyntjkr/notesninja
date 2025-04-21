@@ -12,13 +12,22 @@ interface PDFData {
   Pages: PDFPage[];
 }
 
+interface PDFParserOptions {
+  maxPages?: number;
+}
+
 /**
  * Parses a PDF file from a URL with a timeout
  * @param fileUrl - The URL of the PDF file
  * @param timeoutMs - Timeout in milliseconds (default: 25000)
+ * @param options - Additional options for parsing
  * @returns The text content of the PDF
  */
-export async function parsePdfFromUrl(fileUrl: string, timeoutMs: number = 25000): Promise<string> {
+export async function parsePdfFromUrl(
+  fileUrl: string, 
+  timeoutMs: number = 25000,
+  options?: PDFParserOptions
+): Promise<string> {
   // Create a timeout promise
   const timeoutPromise = new Promise<string>((_, reject) => {
     setTimeout(() => reject(new Error('PDF parsing timed out')), timeoutMs);
@@ -27,7 +36,7 @@ export async function parsePdfFromUrl(fileUrl: string, timeoutMs: number = 25000
   try {
     // Race between parsing and timeout
     return await Promise.race([
-      parseWithoutTimeout(fileUrl),
+      parseWithoutTimeout(fileUrl, options),
       timeoutPromise
     ]);
   } catch (error: unknown) {
@@ -40,7 +49,7 @@ export async function parsePdfFromUrl(fileUrl: string, timeoutMs: number = 25000
 /**
  * Internal function to parse PDF without timeout
  */
-async function parseWithoutTimeout(fileUrl: string): Promise<string> {
+async function parseWithoutTimeout(fileUrl: string, options?: PDFParserOptions): Promise<string> {
   try {
     // Fetch the PDF file
     const response = await fetch(fileUrl, { 
@@ -75,11 +84,16 @@ async function parseWithoutTimeout(fileUrl: string): Promise<string> {
             return;
           }
           
+          // Apply maxPages limit if specified
+          const pages = options?.maxPages 
+            ? pdfData.Pages.slice(0, options.maxPages) 
+            : pdfData.Pages;
+          
           // Simplified extraction to reduce chance of errors
           let text = '';
           try {
             text = decodeURIComponent(
-              pdfData.Pages.map((page: PDFPage) => 
+              pages.map((page: PDFPage) => 
                 Array.isArray(page.Texts) ? 
                   page.Texts.map((text: PDFText) => 
                     Array.isArray(text.R) ? 
@@ -91,7 +105,7 @@ async function parseWithoutTimeout(fileUrl: string): Promise<string> {
             );
           } catch (decodeError: unknown) {
             // If decoding fails, try a simpler approach
-            text = pdfData.Pages.map(page => 
+            text = pages.map(page => 
               Array.isArray(page.Texts) ? 
                 page.Texts.map(t => 
                   Array.isArray(t.R) ? 

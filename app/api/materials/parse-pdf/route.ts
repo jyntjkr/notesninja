@@ -5,7 +5,10 @@ import { prisma } from '@/lib/prisma';
 import { parsePdfFromUrl } from '@/utils/pdfParser';
 
 // Longer timeout for background parsing process
-const PDF_PARSE_TIMEOUT = 60000; // 60 seconds
+const PDF_PARSE_TIMEOUT = 45000; // 45 seconds (below Vercel's 50s limit)
+
+// Maximum content size to prevent database issues
+const MAX_CONTENT_LENGTH = 1000000; // 1MB limit
 
 export async function POST(request: NextRequest) {
   try {
@@ -49,29 +52,48 @@ export async function POST(request: NextRequest) {
     });
 
     try {
-      // Parse PDF with extended timeout
+      // First attempt: Try to parse the entire PDF
       console.log('Starting PDF parsing for:', upload.fileUrl);
-      const parsedContent = await parsePdfFromUrl(upload.fileUrl, PDF_PARSE_TIMEOUT);
+      let parsedContent = await parsePdfFromUrl(upload.fileUrl, PDF_PARSE_TIMEOUT);
+      
+      // If first attempt fails or returns empty, try with partial content
+      if (!parsedContent || parsedContent.length === 0) {
+        console.log('First parsing attempt returned no content, trying with maxPages limit');
+        // Fallback to parsing only first 10 pages
+        const options = { maxPages: 10 };
+        parsedContent = await parsePdfFromUrl(upload.fileUrl, PDF_PARSE_TIMEOUT, options);
+      }
+      
+      // If we still don't have content, try an even smaller chunk
+      if (!parsedContent || parsedContent.length === 0) {
+        console.log('Second parsing attempt failed, trying with smaller limit');
+        // Last resort: just try to get the first 3 pages
+        const options = { maxPages: 3 };
+        parsedContent = await parsePdfFromUrl(upload.fileUrl, PDF_PARSE_TIMEOUT, options);
+      }
       
       // Limit parsed content size to prevent database issues
-      const maxContentLength = 1000000; // 1MB limit
-      const truncatedContent = parsedContent && parsedContent.length > maxContentLength 
-        ? parsedContent.substring(0, maxContentLength) 
+      const truncatedContent = parsedContent && parsedContent.length > MAX_CONTENT_LENGTH 
+        ? parsedContent.substring(0, MAX_CONTENT_LENGTH) 
         : parsedContent;
+
+      if (!truncatedContent || truncatedContent.length === 0) {
+        throw new Error('Failed to extract any content from PDF');
+      }
 
       // Update the upload record with parsed content and status
       await prisma.upload.update({
         where: { id: uploadId },
         data: { 
-          parsedContent: truncatedContent || '',
-          parseStatus: truncatedContent ? 'COMPLETED' : 'FAILED'
+          parsedContent: truncatedContent,
+          parseStatus: 'COMPLETED'
         },
       });
 
       return NextResponse.json({ 
         success: true, 
         message: 'PDF parsing completed successfully',
-        contentLength: truncatedContent?.length || 0 
+        contentLength: truncatedContent.length
       });
     } catch (error) {
       console.error('Error parsing PDF:', error);
