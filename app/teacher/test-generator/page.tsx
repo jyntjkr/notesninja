@@ -95,17 +95,17 @@ const TeacherTestGenerator = () => {
 
       const data = await response.json();
       
-      // Set materials state (this assumes you have a setMaterials function)
-      const transformedMaterials = data.materials.map((material: any): Material => ({
+      // Set materials state with the returned uploads array (API returns uploads, not materials)
+      const transformedMaterials = data.uploads.map((material: any): Material => ({
         id: material.id,
         title: material.title,
         description: material.description,
         fileUrl: material.fileUrl,
         fileType: material.fileType,
-        uploadedAt: new Date(material.uploadedAt).toLocaleDateString(),
+        uploadedAt: new Date(material.createdAt).toLocaleDateString(),
         parsedContent: material.parsedContent,
         parseStatus: material.parseStatus,
-        isReady: material.parseStatus === "COMPLETED" && material.parsedContent,
+        isReady: material.parseStatus === "COMPLETED" && material.hasParsedContent,
         isPending: material.parseStatus === "PROCESSING" || material.parseStatus === "PENDING",
       }));
       
