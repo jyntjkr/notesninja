@@ -62,6 +62,22 @@ const TeacherUpload = () => {
       return;
     }
     
+    // Validate required fields
+    if (!materialTitle.trim()) {
+      toast.error("Please enter a title for the material");
+      return;
+    }
+    
+    if (!materialSubject) {
+      toast.error("Please select a subject");
+      return;
+    }
+    
+    if (!materialDescription.trim()) {
+      toast.error("Please provide a description");
+      return;
+    }
+    
     setIsSubmitting(true);
     
     try {
@@ -84,8 +100,10 @@ const TeacherUpload = () => {
         }),
       });
 
+      const data = await response.json();
+      
       if (!response.ok) {
-        throw new Error('Failed to save material');
+        throw new Error(data.error || 'Failed to save material');
       }
 
       // Success!
@@ -103,7 +121,7 @@ const TeacherUpload = () => {
       }, 3000);
     } catch (error) {
       console.error('Error saving material:', error);
-      toast.error("Failed to save material. Please try again.");
+      toast.error(error instanceof Error ? error.message : "Failed to save material. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -142,12 +160,29 @@ const TeacherUpload = () => {
                           onClientUploadComplete={(res?: UploadFileResponse[]) => {
                             setIsUploading(false);
                             if (res && res.length > 0) {
+                              // Try to determine file type from file extension
+                              const fileName = res[0].name;
+                              let fileType = '';
+                              
+                              if (fileName) {
+                                const extension = fileName.split('.').pop()?.toLowerCase();
+                                if (extension === 'pdf') {
+                                  fileType = 'application/pdf';
+                                } else if (['doc', 'docx'].includes(extension || '')) {
+                                  fileType = 'application/msword';
+                                } else if (['jpg', 'jpeg', 'png'].includes(extension || '')) {
+                                  fileType = `image/${extension}`;
+                                } else if (extension === 'txt') {
+                                  fileType = 'text/plain';
+                                }
+                              }
+                              
                               setUploadedFile({
                                 fileUrl: res[0].url,
                                 fileKey: res[0].key,
                                 fileName: res[0].name,
                                 fileSize: res[0].size,
-                                fileType: '' // No mime type in UploadFileResponse, using empty string
+                                fileType: fileType
                               });
                               toast.success("File uploaded successfully!");
                             }

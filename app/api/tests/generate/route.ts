@@ -30,8 +30,43 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Material not found' }, { status: 404 });
     }
 
-    // Parse the PDF content
-    const pdfContent = await parsePdfFromUrl(material.fileUrl);
+    // Get content - either use cached parsed content or parse on demand
+    let pdfContent;
+    
+    if (material.parsedContent && material.parsedContent.trim() !== '') {
+      console.log('Using previously parsed content from database');
+      pdfContent = material.parsedContent;
+    } else {
+      console.log('No valid parsed content found, parsing PDF now');
+      try {
+        pdfContent = await parsePdfFromUrl(material.fileUrl);
+        
+        // Only save if we got actual content
+        if (pdfContent && pdfContent.trim() !== '') {
+          // Save the parsed content for future use
+          try {
+            await prisma.upload.update({
+              where: { id: materialId },
+              data: { parsedContent: pdfContent }
+            });
+            console.log('Updated material with parsed content');
+          } catch (error) {
+            console.error('Error saving parsed content:', error);
+            // Continue with test generation even if update fails
+          }
+        } else {
+          console.error('PDF parsing returned empty content');
+          return NextResponse.json({ 
+            error: 'Could not extract content from the PDF file' 
+          }, { status: 400 });
+        }
+      } catch (error) {
+        console.error('Error parsing PDF:', error);
+        return NextResponse.json({ 
+          error: 'Failed to parse the PDF file' 
+        }, { status: 400 });
+      }
+    }
 
     // Generate the test
     const generatedTest = await generateTest(pdfContent, testConfig as TestConfig);

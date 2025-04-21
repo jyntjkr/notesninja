@@ -468,6 +468,7 @@ const TeacherTestGenerator = () => {
                           variant="outline" 
                           size="sm"
                           disabled={isPdfLoading}
+                          onClick={() => {}}
                         >
                           {isPdfLoading ? (
                             <>

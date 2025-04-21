@@ -406,7 +406,7 @@ interface SimplePDFDownloadProps {
   description?: string;
   content: string;
   fileName: string;
-  children: React.ReactNode;
+  children: React.ReactNode | (({ isGenerating, onClick }: { isGenerating: boolean, onClick: () => Promise<void> }) => React.ReactNode);
   onStart?: () => void;
   onComplete?: (success: boolean) => void;
 }
@@ -450,13 +450,11 @@ export const SimplePDFDownloadButton: React.FC<SimplePDFDownloadProps> = ({
   };
   
   return (
-    <button 
-      onClick={handleClick} 
-      disabled={isGenerating}
-      style={{ border: 'none', background: 'none', padding: 0, cursor: isGenerating ? 'default' : 'pointer' }}
-    >
-      {children}
-    </button>
+    <div onClick={handleClick} style={{ display: 'inline-block' }}>
+      {typeof children === 'function' 
+        ? children({ isGenerating, onClick: handleClick }) 
+        : children}
+    </div>
   );
 };
 

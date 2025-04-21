@@ -51,6 +51,11 @@ export async function generateTest(content: string, config: TestConfig): Promise
       throw new Error('GEMINI_API_KEY is not set in environment variables');
     }
 
+    // Validate content
+    if (!content || content.trim() === '') {
+      throw new Error('Cannot generate test from empty content');
+    }
+
     // Get the model
     const model = genAI.getGenerativeModel({
       model: 'gemini-1.5-pro',
@@ -62,11 +67,16 @@ export async function generateTest(content: string, config: TestConfig): Promise
       `${q.quantity} ${q.difficulty} ${q.type} questions`
     ).join(', ');
 
+    // Limit content length to avoid exceeding API limits
+    const maxContentLength = 30000;
+    const trimmedContent = content.substring(0, maxContentLength);
+    const contentTruncated = content.length > maxContentLength;
+
     // Create the prompt
     const prompt = `
     You are an expert educational test creator. Create a comprehensive test based on the following educational content:
     
-    ${content.substring(0, 30000)} ${content.length > 30000 ? '...(content truncated)' : ''}
+    ${trimmedContent} ${contentTruncated ? '...(content truncated)' : ''}
     
     Test Title: ${config.testTitle}
     Subject: ${config.testSubject}
@@ -88,9 +98,15 @@ export async function generateTest(content: string, config: TestConfig): Promise
     const response = await result.response;
     const text = response.text();
     
+    if (!text || text.trim() === '') {
+      throw new Error('AI generated empty response');
+    }
+    
     return text;
   } catch (error) {
     console.error('Error generating test with Gemini:', error);
-    throw new Error('Failed to generate test with AI');
+    throw new Error(error instanceof Error ? 
+      `Failed to generate test: ${error.message}` : 
+      'Failed to generate test with AI');
   }
 } 
