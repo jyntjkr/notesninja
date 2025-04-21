@@ -595,15 +595,6 @@ const TeacherTestGenerator = () => {
                 <div className="space-y-4">
                   <div className="border rounded-md p-4 relative bg-card">
                     <div className="flex justify-end gap-2 mb-4">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={handleDownloadMarkdown}
-                      >
-                        <FileDown className="h-4 w-4 mr-2" />
-                        Download MD
-                      </Button>
                       <SimplePDFDownloadButton
                         title={testTitle}
                         description={testDescription}

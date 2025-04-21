@@ -123,271 +123,252 @@ export default function TeacherDashboard() {
 
   return (
     <>
-      <PageHeader 
-        title="Teacher Dashboard" 
-        description="Welcome back! Here's an overview of your materials and student engagement."
-      />
-      
-      <motion.div
-        variants={container}
-        initial="hidden"
-        animate="show"
-        className="grid gap-4 md:grid-cols-2 lg:grid-cols-4"
-      >
-        <motion.div variants={item}>
-          <MetricCard
-            title="Total Materials"
-            value={String(materialCount || 0)}
-            icon={<FileText className="h-4 w-4" />}
-            description={materialCount === 0 ? "Upload your first material" : ""}
-          />
-        </motion.div>
-        
-        <motion.div variants={item}>
-          <MetricCard
-            title="Tests Created"
-            value="0"
-            icon={<Clipboard className="h-4 w-4" />}
-            description="Create your first test"
-          />
-        </motion.div>
-        
-        <motion.div variants={item}>
-          <MetricCard
-            title="Active Students"
-            value="0"
-            icon={<GraduationCap className="h-4 w-4" />}
-            description="Invite students to join"
-          />
-        </motion.div>
-        
-        <motion.div variants={item}>
-          <MetricCard
-            title="Average Engagement"
-            value="0%"
-            icon={<Users className="h-4 w-4" />}
-            description="Track student engagement"
-          />
-        </motion.div>
-      </motion.div>
-      
-      <div className="mt-8 grid gap-6 md:grid-cols-2">
-        <Tabs defaultValue="recent" className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold">Your Materials</h2>
-            <TabsList>
-              <TabsTrigger value="recent">Recent</TabsTrigger>
-              <TabsTrigger value="popular">Popular</TabsTrigger>
-            </TabsList>
-          </div>
-          
-          <TabsContent value="recent" className="space-y-4 mt-0">
-            {materialsLoading ? (
-              <div className="flex items-center justify-center p-8">
-                <Icons.spinner className="h-6 w-6 animate-spin" />
-              </div>
-            ) : !materials || materials.length === 0 ? (
-              <Card>
-                <CardContent className="p-8 flex flex-col items-center justify-center text-center">
-                  <FileText className="h-10 w-10 text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-medium mb-2">No materials yet</h3>
-                  <p className="text-sm text-muted-foreground mb-4">Start by uploading your first teaching material</p>
-                  <Button onClick={() => router.push('/teacher/upload')}>Upload Material</Button>
-                </CardContent>
-              </Card>
-            ) : (
-              materials.map((item, i) => (
-                <motion.div 
-                  key={item.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.1 }}
-                >
-                  <Card className="hover-scale">
-                    <CardContent className="p-4">
-                      <div className="flex flex-col gap-2">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <h3 className="font-medium">{item.title}</h3>
-                            <p className="text-sm text-muted-foreground">{item.dateDisplay}</p>
-                          </div>
-                          <Button 
-                            size="icon" 
-                            variant="ghost" 
-                            className="h-8 w-8" 
-                            title="Download"
-                            onClick={() => handleDownload(item.fileUrl, item.fileName)}
-                          >
-                            <Download className="h-4 w-4" />
-                          </Button>
-                        </div>
-                        
-                        <div className="flex items-center gap-2 mt-1">
-                          <div className="text-xs bg-secondary px-2 py-0.5 rounded-full">
-                            {item.materialType}
-                          </div>
-                          <div className="text-xs bg-secondary px-2 py-0.5 rounded-full">
-                            {item.subject}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            {(item.fileSize / (1024 * 1024)).toFixed(2)} MB
-                          </div>
-                          {item.fileUrl.toLowerCase().endsWith('.pdf') && (
-                            <>
-                              {item.isPending && (
-                                <div className="text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded-full flex items-center">
-                                  <Icons.spinner className="h-3 w-3 mr-1 animate-spin" />
-                                  Processing
-                                </div>
-                              )}
-                              {item.isReady && (
-                                <div className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full flex items-center">
-                                  <CheckCircle className="h-3 w-3 mr-1" />
-                                  Ready
-                                </div>
-                              )}
-                              {!item.isPending && !item.isReady && (
-                                <div className="text-xs bg-red-100 text-red-800 px-2 py-0.5 rounded-full flex items-center">
-                                  <AlertCircle className="h-3 w-3 mr-1" />
-                                  Failed
-                                </div>
-                              )}
-                            </>
-                          )}
-                        </div>
-                        
-                        {item.description && (
-                          <p className="text-sm mt-2 line-clamp-2">{item.description}</p>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              ))
-            )}
-            
-            {materials && materials.length > 0 && (
-              <div className="text-center pt-2">
-                <Button variant="outline" onClick={() => router.push('/teacher/upload')}>
-                  Upload More
-                </Button>
-              </div>
-            )}
-          </TabsContent>
-          
-          <TabsContent value="popular" className="space-y-4 mt-0">
-            {materialsLoading ? (
-              <div className="flex items-center justify-center p-8">
-                <Icons.spinner className="h-6 w-6 animate-spin" />
-              </div>
-            ) : !materials || materials.length === 0 ? (
-              <Card>
-                <CardContent className="p-8 flex flex-col items-center justify-center text-center">
-                  <FileText className="h-10 w-10 text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-medium mb-2">No materials yet</h3>
-                  <p className="text-sm text-muted-foreground mb-4">Start by uploading your first teaching material</p>
-                  <Button onClick={() => router.push('/teacher/upload')}>Upload Material</Button>
-                </CardContent>
-              </Card>
-            ) : (
-              materials.map((item, i) => (
-                <motion.div 
-                  key={item.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.1 }}
-                >
-                  <Card className="hover-scale">
-                    <CardContent className="p-4">
-                      <div className="flex flex-col gap-2">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <h3 className="font-medium">{item.title}</h3>
-                            <p className="text-sm text-muted-foreground">{item.dateDisplay}</p>
-                          </div>
-                          <Button 
-                            size="icon" 
-                            variant="ghost" 
-                            className="h-8 w-8" 
-                            title="Download"
-                            onClick={() => handleDownload(item.fileUrl, item.fileName)}
-                          >
-                            <Download className="h-4 w-4" />
-                          </Button>
-                        </div>
-                        
-                        <div className="flex items-center gap-2 mt-1">
-                          <div className="text-xs bg-secondary px-2 py-0.5 rounded-full">
-                            {item.materialType}
-                          </div>
-                          <div className="text-xs bg-secondary px-2 py-0.5 rounded-full">
-                            {item.subject}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            {(item.fileSize / (1024 * 1024)).toFixed(2)} MB
-                          </div>
-                          {item.fileUrl.toLowerCase().endsWith('.pdf') && (
-                            <>
-                              {item.isPending && (
-                                <div className="text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded-full flex items-center">
-                                  <Icons.spinner className="h-3 w-3 mr-1 animate-spin" />
-                                  Processing
-                                </div>
-                              )}
-                              {item.isReady && (
-                                <div className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full flex items-center">
-                                  <CheckCircle className="h-3 w-3 mr-1" />
-                                  Ready
-                                </div>
-                              )}
-                              {!item.isPending && !item.isReady && (
-                                <div className="text-xs bg-red-100 text-red-800 px-2 py-0.5 rounded-full flex items-center">
-                                  <AlertCircle className="h-3 w-3 mr-1" />
-                                  Failed
-                                </div>
-                              )}
-                            </>
-                          )}
-                        </div>
-                        
-                        {item.description && (
-                          <p className="text-sm mt-2 line-clamp-2">{item.description}</p>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              ))
-            )}
-          </TabsContent>
-        </Tabs>
-        
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent Tests</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-5">
-              <div className="flex flex-col items-center justify-center text-center p-8">
-                <Clipboard className="h-10 w-10 text-muted-foreground mb-4" />
-                <h3 className="text-lg font-medium mb-2">No tests created yet</h3>
-                <p className="text-sm text-muted-foreground mb-4">Start by creating your first test for students</p>
-                <Button>Create New Test</Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-      
-      <div className="mt-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="flex justify-between items-center mb-6">
+        <PageHeader 
+          title="Teacher Dashboard" 
+          description="Welcome back! Here's an overview of your materials and student engagement."
+        />
         <div className="text-sm text-muted-foreground flex items-center">
           <Clock className="h-4 w-4 mr-1" />
           Last updated: Today at {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
         </div>
-        <div className="flex gap-3">
-          <Button variant="outline">Import Materials</Button>
-          <Button onClick={() => router.push('/teacher/upload')}>Upload Material</Button>
+      </div>
+      
+      <div className="grid gap-6 md:grid-cols-2">
+        {/* Left column with metric cards and materials */}
+        <div className="space-y-6">
+          {/* Metric cards */}
+          <motion.div
+            variants={container}
+            initial="hidden"
+            animate="show"
+            className="grid gap-4 grid-cols-2"
+          >
+            <motion.div variants={item}>
+              <MetricCard
+                title="Total Materials"
+                value={String(materialCount || 0)}
+                icon={<FileText className="h-4 w-4" />}
+                description={materialCount === 0 ? "Upload your first material" : ""}
+              />
+            </motion.div>
+            
+            <motion.div variants={item}>
+              <MetricCard
+                title="Tests Created"
+                value="0"
+                icon={<Clipboard className="h-4 w-4" />}
+                description=""
+              />
+            </motion.div>
+          </motion.div>
+          
+          {/* Materials section */}
+          <Tabs defaultValue="recent" className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-semibold">Your Materials</h2>
+              <TabsList>
+                <TabsTrigger value="recent">Recent</TabsTrigger>
+                <TabsTrigger value="popular">Popular</TabsTrigger>
+              </TabsList>
+            </div>
+            
+            <TabsContent value="recent" className="space-y-4 mt-0">
+              {materialsLoading ? (
+                <div className="flex items-center justify-center p-8">
+                  <Icons.spinner className="h-6 w-6 animate-spin" />
+                </div>
+              ) : !materials || materials.length === 0 ? (
+                <Card>
+                  <CardContent className="p-8 flex flex-col items-center justify-center text-center">
+                    <FileText className="h-10 w-10 text-muted-foreground mb-4" />
+                    <h3 className="text-lg font-medium mb-2">No materials yet</h3>
+                    <p className="text-sm text-muted-foreground mb-4">Start by uploading your first teaching material</p>
+                    <Button onClick={() => router.push('/teacher/upload')}>Upload Material</Button>
+                  </CardContent>
+                </Card>
+              ) : (
+                materials.map((item, i) => (
+                  <motion.div 
+                    key={item.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.1 }}
+                  >
+                    <Card className="hover-scale">
+                      <CardContent className="p-4">
+                        <div className="flex flex-col gap-2">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <h3 className="font-medium">{item.title}</h3>
+                              <p className="text-sm text-muted-foreground">{item.dateDisplay}</p>
+                            </div>
+                            <Button 
+                              size="icon" 
+                              variant="ghost" 
+                              className="h-8 w-8" 
+                              title="Download"
+                              onClick={() => handleDownload(item.fileUrl, item.fileName)}
+                            >
+                              <Download className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          
+                          <div className="flex items-center gap-2 mt-1">
+                            <div className="text-xs bg-secondary px-2 py-0.5 rounded-full">
+                              {item.materialType}
+                            </div>
+                            <div className="text-xs bg-secondary px-2 py-0.5 rounded-full">
+                              {item.subject}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {(item.fileSize / (1024 * 1024)).toFixed(2)} MB
+                            </div>
+                            {item.fileUrl.toLowerCase().endsWith('.pdf') && (
+                              <>
+                                {item.isPending && (
+                                  <div className="text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded-full flex items-center">
+                                    <Icons.spinner className="h-3 w-3 mr-1 animate-spin" />
+                                    Processing
+                                  </div>
+                                )}
+                                {item.isReady && (
+                                  <div className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full flex items-center">
+                                    <CheckCircle className="h-3 w-3 mr-1" />
+                                    Ready
+                                  </div>
+                                )}
+                                {!item.isPending && !item.isReady && (
+                                  <div className="text-xs bg-red-100 text-red-800 px-2 py-0.5 rounded-full flex items-center">
+                                    <AlertCircle className="h-3 w-3 mr-1" />
+                                    Failed
+                                  </div>
+                                )}
+                              </>
+                            )}
+                          </div>
+                          
+                          {item.description && (
+                            <p className="text-sm mt-2 line-clamp-2">{item.description}</p>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                ))
+              )}
+              
+              {materials && materials.length > 0 && (
+                <div className="text-center pt-2">
+                  <Button variant="outline" onClick={() => router.push('/teacher/upload')}>
+                    Upload More
+                  </Button>
+                </div>
+              )}
+            </TabsContent>
+            
+            <TabsContent value="popular" className="space-y-4 mt-0">
+              {materialsLoading ? (
+                <div className="flex items-center justify-center p-8">
+                  <Icons.spinner className="h-6 w-6 animate-spin" />
+                </div>
+              ) : !materials || materials.length === 0 ? (
+                <Card>
+                  <CardContent className="p-8 flex flex-col items-center justify-center text-center">
+                    <FileText className="h-10 w-10 text-muted-foreground mb-4" />
+                    <h3 className="text-lg font-medium mb-2">No materials yet</h3>
+                    <p className="text-sm text-muted-foreground mb-4">Start by uploading your first teaching material</p>
+                    <Button onClick={() => router.push('/teacher/upload')}>Upload Material</Button>
+                  </CardContent>
+                </Card>
+              ) : (
+                materials.map((item, i) => (
+                  <motion.div 
+                    key={item.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.1 }}
+                  >
+                    <Card className="hover-scale">
+                      <CardContent className="p-4">
+                        <div className="flex flex-col gap-2">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <h3 className="font-medium">{item.title}</h3>
+                              <p className="text-sm text-muted-foreground">{item.dateDisplay}</p>
+                            </div>
+                            <Button 
+                              size="icon" 
+                              variant="ghost" 
+                              className="h-8 w-8" 
+                              title="Download"
+                              onClick={() => handleDownload(item.fileUrl, item.fileName)}
+                            >
+                              <Download className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          
+                          <div className="flex items-center gap-2 mt-1">
+                            <div className="text-xs bg-secondary px-2 py-0.5 rounded-full">
+                              {item.materialType}
+                            </div>
+                            <div className="text-xs bg-secondary px-2 py-0.5 rounded-full">
+                              {item.subject}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {(item.fileSize / (1024 * 1024)).toFixed(2)} MB
+                            </div>
+                            {item.fileUrl.toLowerCase().endsWith('.pdf') && (
+                              <>
+                                {item.isPending && (
+                                  <div className="text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded-full flex items-center">
+                                    <Icons.spinner className="h-3 w-3 mr-1 animate-spin" />
+                                    Processing
+                                  </div>
+                                )}
+                                {item.isReady && (
+                                  <div className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full flex items-center">
+                                    <CheckCircle className="h-3 w-3 mr-1" />
+                                    Ready
+                                  </div>
+                                )}
+                                {!item.isPending && !item.isReady && (
+                                  <div className="text-xs bg-red-100 text-red-800 px-2 py-0.5 rounded-full flex items-center">
+                                    <AlertCircle className="h-3 w-3 mr-1" />
+                                    Failed
+                                  </div>
+                                )}
+                              </>
+                            )}
+                          </div>
+                          
+                          {item.description && (
+                            <p className="text-sm mt-2 line-clamp-2">{item.description}</p>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                ))
+              )}
+            </TabsContent>
+          </Tabs>
         </div>
+        
+        {/* Right column with recent tests */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle>Recent Tests</CardTitle>
+          </CardHeader>
+          <CardContent className="pb-2">
+            <div className="flex flex-col items-center justify-center text-center p-4">
+              <Clipboard className="h-8 w-8 text-muted-foreground mb-3" />
+              <h3 className="text-base font-medium mb-2">No tests created yet</h3>
+              <p className="text-sm text-muted-foreground mb-3">Start by creating your first test for students</p>
+              <Button size="sm">Create New Test</Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </>
   );
