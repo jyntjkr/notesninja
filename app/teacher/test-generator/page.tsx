@@ -132,17 +132,7 @@ const TeacherTestGenerator = () => {
     }
 
     setIsGenerating(true);
-    
-    // Show toast for long-running operation
-    toast.info('Generating test, this may take a minute or two...', {
-      duration: 10000, // Show for 10 seconds
-    });
-    
     try {
-      // Set up a controller for timeout
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 180000); // 3 minute timeout
-      
       // Call the API to generate the test
       const response = await fetch('/api/tests/generate', {
         method: 'POST',
@@ -158,15 +148,9 @@ const TeacherTestGenerator = () => {
             questions,
           },
         }),
-        signal: controller.signal,
       });
-      
-      clearTimeout(timeoutId);
 
       if (!response.ok) {
-        if (response.status === 504) {
-          throw new Error('The request timed out. The PDF might be too large or complex.');
-        }
         throw new Error('Failed to generate test');
       }
 
@@ -181,17 +165,7 @@ const TeacherTestGenerator = () => {
       }
     } catch (error) {
       console.error('Error generating test:', error);
-      
-      // Better error handling with specific messages
-      if (error instanceof Error) {
-        if (error.name === 'AbortError') {
-          toast.error('The test generation took too long and was aborted. Try a smaller PDF or fewer questions.');
-        } else {
-          toast.error(`Failed to generate test: ${error.message}`);
-        }
-      } else {
-        toast.error('Failed to generate test. Please try again.');
-      }
+      toast.error('Failed to generate test. Please try again.');
     } finally {
       setIsGenerating(false);
     }

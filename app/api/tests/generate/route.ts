@@ -5,17 +5,6 @@ import { prisma } from '@/lib/prisma';
 import { parsePdfFromUrl } from '@/utils/pdfParser';
 import { generateTest, TestConfig } from '@/utils/geminiAi';
 
-// Add API route configuration to increase timeout limits
-export const config = {
-  api: {
-    bodyParser: {
-      sizeLimit: '10mb',
-    },
-    responseLimit: '10mb',
-    externalResolver: true,
-  },
-};
-
 export async function POST(req: NextRequest) {
   try {
     // Check if user is authenticated

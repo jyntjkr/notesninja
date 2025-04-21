@@ -38,24 +38,6 @@ export interface TestConfig {
   }>;
 }
 
-// Helper function to truncate content intelligently
-function smartTruncate(content: string, maxLength: number): string {
-  if (content.length <= maxLength) return content;
-  
-  // Find paragraph breaks to truncate at logical points
-  const paragraphs = content.split(/\n\s*\n/);
-  let result = '';
-  
-  for (const paragraph of paragraphs) {
-    if ((result + paragraph).length > maxLength) {
-      break;
-    }
-    result += paragraph + '\n\n';
-  }
-  
-  return result.trim();
-}
-
 /**
  * Generates a test using Gemini AI based on the provided content and configuration
  * @param content - The content to generate the test from
@@ -73,31 +55,18 @@ export async function generateTest(content: string, config: TestConfig): Promise
     const model = genAI.getGenerativeModel({
       model: 'gemini-1.5-pro',
       safetySettings,
-      generationConfig: {
-        temperature: 0.7, // Add some creativity but keep it reasonably focused
-        topP: 0.9,
-        maxOutputTokens: 8192, // Limit output size for better performance
-      }
     });
 
     // Create a context for the questions
     const questionConfig = config.questions.map(q => 
       `${q.quantity} ${q.difficulty} ${q.type} questions`
     ).join(', ');
-    
-    // Intelligently truncate content
-    const MAX_CONTENT_LENGTH = 15000; // Reduced from 30000 for better performance
-    const truncatedContent = smartTruncate(content, MAX_CONTENT_LENGTH);
-    
-    if (content.length > MAX_CONTENT_LENGTH) {
-      console.log(`Content was truncated from ${content.length} to ${truncatedContent.length} characters`);
-    }
 
     // Create the prompt
     const prompt = `
     You are an expert educational test creator. Create a comprehensive test based on the following educational content:
     
-    ${truncatedContent} ${content.length > MAX_CONTENT_LENGTH ? '...(content truncated for brevity)' : ''}
+    ${content.substring(0, 30000)} ${content.length > 30000 ? '...(content truncated)' : ''}
     
     Test Title: ${config.testTitle}
     Subject: ${config.testSubject}
@@ -114,23 +83,14 @@ export async function generateTest(content: string, config: TestConfig): Promise
     The output should be formatted in markdown for clean presentation.
     `;
 
-    // Generate the content with timeout
-    const generateWithTimeout = async () => {
-      const timeout = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('AI generation timed out after 3 minutes')), 180000); // 3 minute timeout
-      });
-      
-      const generatePromise = model.generateContent(prompt);
-      
-      // Race between the generation and the timeout
-      const result = await Promise.race([generatePromise, timeout]);
-      const response = await result.response;
-      return response.text();
-    };
+    // Generate the content
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
     
-    return await generateWithTimeout();
+    return text;
   } catch (error) {
     console.error('Error generating test with Gemini:', error);
-    throw new Error(`Failed to generate test with AI: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw new Error('Failed to generate test with AI');
   }
 } 

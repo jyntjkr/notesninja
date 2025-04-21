@@ -428,10 +428,25 @@ export const SimplePDFDownloadButton: React.FC<SimplePDFDownloadProps> = ({
     setIsGenerating(true);
     if (onStart) onStart();
     
-    const success = await downloadPDF(title, description, content, fileName);
-    
-    setIsGenerating(false);
-    if (onComplete) onComplete(success);
+    try {
+      // Set a timeout to ensure UI responsiveness
+      const timeoutPromise = new Promise<boolean>((_, reject) => {
+        setTimeout(() => reject(new Error('PDF generation timeout')), 30000); // 30-second timeout
+      });
+      
+      // Race between the actual PDF generation and the timeout
+      const success = await Promise.race([
+        downloadPDF(title, description, content, fileName),
+        timeoutPromise
+      ]);
+      
+      setIsGenerating(false);
+      if (onComplete) onComplete(success);
+    } catch (error) {
+      console.error('Error in PDF generation:', error);
+      setIsGenerating(false);
+      if (onComplete) onComplete(false);
+    }
   };
   
   return (
