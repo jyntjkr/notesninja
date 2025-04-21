@@ -5,6 +5,9 @@ import { prisma } from '@/lib/prisma';
 import { parsePdfFromUrl } from '@/utils/pdfParser';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 
+// Maximum time to allow for PDF parsing in serverless environment (15 seconds)
+const PDF_PARSE_TIMEOUT = 15000;
+
 export async function POST(request: Request) {
   console.log('POST /api/materials - Request received');
   try {
@@ -54,159 +57,90 @@ export async function POST(request: Request) {
       );
     }
 
-    // Parse PDF content if it's a PDF file
-    let parsedContent = null;
+    // Check database connection first to fail fast
     try {
-      if (fileType === 'application/pdf' || fileUrl.toLowerCase().endsWith('.pdf')) {
-        console.log('Parsing PDF content for:', fileUrl);
-        parsedContent = await parsePdfFromUrl(fileUrl);
-        
-        // Limit parsed content size to prevent database issues
-        const maxContentLength = 1000000; // 1MB limit
-        if (parsedContent && parsedContent.length > maxContentLength) {
-          console.log(`PDF content too large (${parsedContent.length} chars), truncating`);
-          parsedContent = parsedContent.substring(0, maxContentLength);
-        }
-        
-        console.log('PDF parsed successfully, content length:', parsedContent?.length || 0);
-      }
-    } catch (error) {
-      console.error('Error parsing PDF:', error);
-      // Continue with upload even if parsing fails
-    }
-
-    // Create new upload record
-    try {
-      console.log('Creating upload record in database');
-      
-      // Check database connection
-      try {
-        await prisma.$queryRaw`SELECT 1`;
-        console.log('Database connection is active');
-      } catch (connError) {
-        console.error('Database connection error:', connError);
-        return NextResponse.json(
-          { error: 'Database connection error' },
-          { status: 500 }
-        );
-      }
-      
-      // First try to create without parsed content if it's available
-      let upload;
-      
-      if (parsedContent) {
-        try {
-          // First log the data structure being sent
-          const uploadData = {
-            title,
-            fileUrl,
-            fileType,
-            description: description || '',
-            materialType: type || 'notes',
-            subject: subject || 'other',
-            fileName: fileName || '',
-            fileSize: fileSize || 0,
-            fileKey: fileKey || '',
-            parsedContent,
-            user: {
-              connect: {
-                id: session.user.id
-              }
-            }
-          };
-          
-          console.log('Upload data structure (without parsed content):', 
-            JSON.stringify({...uploadData, parsedContent: `[Content length: ${parsedContent.length}]`}, null, 2)
-          );
-          
-          upload = await prisma.upload.create({
-            data: uploadData
-          });
-        } catch (contentError) {
-          console.error('Error saving with parsed content:', contentError);
-          
-          // If that fails, try without parsed content
-          console.log('Retrying without parsed content');
-          upload = await prisma.upload.create({
-            data: {
-              title,
-              fileUrl,
-              fileType,
-              description: description || '',
-              materialType: type || 'notes',
-              subject: subject || 'other',
-              fileName: fileName || '',
-              fileSize: fileSize || 0,
-              fileKey: fileKey || '',
-              user: {
-                connect: {
-                  id: session.user.id
-                }
-              }
-            }
-          });
-          
-          // Try to update with parsed content separately
-          try {
-            if (parsedContent) {
-              await prisma.upload.update({
-                where: { id: upload.id },
-                data: { parsedContent }
-              });
-              console.log('Updated record with parsed content');
-            }
-          } catch (updateError) {
-            console.error('Error updating with parsed content:', updateError);
-            // Continue without parsed content
-          }
-        }
-      } else {
-        // No parsed content, create record normally
-        upload = await prisma.upload.create({
-          data: {
-            title,
-            fileUrl,
-            fileType,
-            description: description || '',
-            materialType: type || 'notes',
-            subject: subject || 'other',
-            fileName: fileName || '',
-            fileSize: fileSize || 0,
-            fileKey: fileKey || '',
-            user: {
-              connect: {
-                id: session.user.id
-              }
-            }
-          }
-        });
-      }
-
-      console.log('Upload created successfully, id:', upload.id);
-      return NextResponse.json({
-        success: true,
-        message: 'Material uploaded successfully',
-        uploadId: upload.id,
-      });
-    } catch (dbError) {
-      console.error('Database error when saving material:', dbError);
-      // Get detailed error information
-      const errorDetails = dbError instanceof Error ? {
-        name: dbError.name,
-        message: dbError.message,
-        stack: dbError.stack
-      } : String(dbError);
-      console.error('Error details:', JSON.stringify(errorDetails, null, 2));
-      
-      if (dbError instanceof PrismaClientKnownRequestError) {
-        console.error('Prisma error code:', dbError.code);
-      }
-      
+      await prisma.$queryRaw`SELECT 1`;
+      console.log('Database connection is active');
+    } catch (connError) {
+      console.error('Database connection error:', connError);
       return NextResponse.json(
-        { error: 'Failed to save material to database', details: errorDetails },
+        { error: 'Database connection error' },
         { status: 500 }
       );
     }
+
+    // Create upload record without parsed content first
+    let upload;
+    try {
+      console.log('Creating initial upload record in database');
+      upload = await prisma.upload.create({
+        data: {
+          title,
+          fileUrl,
+          fileType,
+          description: description || '',
+          materialType: type || 'notes',
+          subject: subject || 'other',
+          fileName: fileName || '',
+          fileSize: fileSize || 0,
+          fileKey: fileKey || '',
+          user: {
+            connect: {
+              id: session.user.id
+            }
+          }
+        },
+      });
+      console.log('Initial upload created successfully, id:', upload.id);
+    } catch (createError) {
+      console.error('Error creating upload record:', createError);
+      return NextResponse.json(
+        { error: 'Failed to create upload record' },
+        { status: 500 }
+      );
+    }
+
+    // Start PDF parsing in background (don't await it)
+    // This way the response can be sent back quickly, and parsing continues in background
+    if (fileType === 'application/pdf' || fileUrl.toLowerCase().endsWith('.pdf')) {
+      console.log('Starting PDF parsing in background for:', fileUrl);
+      
+      // We don't await this - fire and forget in serverless environment
+      (async () => {
+        try {
+          const parsedContent = await parsePdfFromUrl(fileUrl, PDF_PARSE_TIMEOUT);
+          
+          if (parsedContent && parsedContent.length > 0) {
+            console.log('PDF parsed successfully, content length:', parsedContent.length);
+            
+            // Limit parsed content size to prevent database issues
+            const maxContentLength = 1000000; // 1MB limit
+            const trimmedContent = parsedContent.length > maxContentLength 
+              ? parsedContent.substring(0, maxContentLength) 
+              : parsedContent;
+            
+            // Update the record with parsed content
+            await prisma.upload.update({
+              where: { id: upload.id },
+              data: { parsedContent: trimmedContent }
+            });
+            console.log('Updated record with parsed content');
+          } else {
+            console.log('PDF parsing returned empty content');
+          }
+        } catch (parseError) {
+          console.error('Error in background PDF parsing:', parseError);
+        }
+      })();
+    }
+
+    // Return success immediately, don't wait for parsing
+    return NextResponse.json({
+      success: true,
+      message: 'Material uploaded successfully',
+      uploadId: upload.id,
+    });
+    
   } catch (error) {
     console.error('Error uploading material:', error);
     const errorMessage = error instanceof Error ? error.message : String(error);
