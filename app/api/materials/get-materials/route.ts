@@ -19,13 +19,44 @@ export async function GET(req: NextRequest) {
       where: {
         userId,
       },
+      select: {
+        id: true,
+        title: true,
+        fileUrl: true,
+        fileType: true,
+        description: true,
+        materialType: true,
+        subject: true,
+        fileName: true,
+        fileSize: true,
+        createdAt: true,
+        updatedAt: true,
+        parsedContent: true,
+      },
       orderBy: {
         updatedAt: 'desc',
       },
     });
 
-    // Return the uploads
-    return NextResponse.json({ success: true, uploads });
+    // Transform the data to include parsing status
+    const transformedUploads = uploads.map(upload => {
+      // Check if parsedContent exists and has text content
+      const hasParsedContent = upload.parsedContent !== null && typeof upload.parsedContent === 'string';
+      
+      // Remove the actual parsed content to reduce payload size
+      const { parsedContent, ...uploadWithoutContent } = upload;
+      
+      return {
+        ...uploadWithoutContent,
+        hasParsedContent
+      };
+    });
+
+    // Return the uploads with parsing status
+    return NextResponse.json({ 
+      success: true, 
+      uploads: transformedUploads
+    });
     
   } catch (error) {
     console.error('Error fetching materials:', error);

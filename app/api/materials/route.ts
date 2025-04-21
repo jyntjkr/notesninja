@@ -69,11 +69,38 @@ export async function POST(request: Request) {
       );
     }
 
-    // Create upload record without parsed content first
-    let upload;
+    // For PDF files, do the parsing upfront instead of in the background
+    // This ensures the parsing is completed before the function terminates
+    let parsedContent = null;
+    if (fileType === 'application/pdf' || fileUrl.toLowerCase().endsWith('.pdf')) {
+      console.log('Parsing PDF content for:', fileUrl);
+      try {
+        // Parse with timeout to avoid serverless function timeout
+        parsedContent = await parsePdfFromUrl(fileUrl, PDF_PARSE_TIMEOUT);
+        
+        if (parsedContent && parsedContent.length > 0) {
+          console.log('PDF parsed successfully, content length:', parsedContent.length);
+          
+          // Limit parsed content size to prevent database issues
+          const maxContentLength = 1000000; // 1MB limit
+          if (parsedContent.length > maxContentLength) {
+            console.log(`PDF content too large (${parsedContent.length} chars), truncating`);
+            parsedContent = parsedContent.substring(0, maxContentLength);
+          }
+        } else {
+          console.log('PDF parsing returned empty content');
+        }
+      } catch (parseError) {
+        console.error('Error parsing PDF:', parseError);
+        // Continue with upload even if parsing fails
+      }
+    }
+
+    // Create upload record with parsed content if available
     try {
-      console.log('Creating initial upload record in database');
-      upload = await prisma.upload.create({
+      console.log('Creating upload record in database');
+      
+      const upload = await prisma.upload.create({
         data: {
           title,
           fileUrl,
@@ -84,6 +111,7 @@ export async function POST(request: Request) {
           fileName: fileName || '',
           fileSize: fileSize || 0,
           fileKey: fileKey || '',
+          parsedContent,
           user: {
             connect: {
               id: session.user.id
@@ -91,7 +119,31 @@ export async function POST(request: Request) {
           }
         },
       });
-      console.log('Initial upload created successfully, id:', upload.id);
+
+      console.log('Upload created successfully, id:', upload.id);
+      
+      // Double-check if parsedContent was stored (debugging)
+      try {
+        const checkUpload = await prisma.upload.findUnique({
+          where: { id: upload.id },
+          select: { id: true, parsedContent: true }
+        });
+        
+        console.log('Verified parsedContent stored:', 
+          checkUpload?.parsedContent ? 
+          `Yes (length: ${checkUpload.parsedContent.length})` : 
+          'No (null)'
+        );
+      } catch (checkError) {
+        console.error('Error verifying parsed content storage:', checkError);
+      }
+      
+      return NextResponse.json({
+        success: true,
+        message: 'Material uploaded successfully',
+        uploadId: upload.id,
+        parsedContentLength: parsedContent ? parsedContent.length : 0
+      });
     } catch (createError) {
       console.error('Error creating upload record:', createError);
       return NextResponse.json(
@@ -99,48 +151,6 @@ export async function POST(request: Request) {
         { status: 500 }
       );
     }
-
-    // Start PDF parsing in background (don't await it)
-    // This way the response can be sent back quickly, and parsing continues in background
-    if (fileType === 'application/pdf' || fileUrl.toLowerCase().endsWith('.pdf')) {
-      console.log('Starting PDF parsing in background for:', fileUrl);
-      
-      // We don't await this - fire and forget in serverless environment
-      (async () => {
-        try {
-          const parsedContent = await parsePdfFromUrl(fileUrl, PDF_PARSE_TIMEOUT);
-          
-          if (parsedContent && parsedContent.length > 0) {
-            console.log('PDF parsed successfully, content length:', parsedContent.length);
-            
-            // Limit parsed content size to prevent database issues
-            const maxContentLength = 1000000; // 1MB limit
-            const trimmedContent = parsedContent.length > maxContentLength 
-              ? parsedContent.substring(0, maxContentLength) 
-              : parsedContent;
-            
-            // Update the record with parsed content
-            await prisma.upload.update({
-              where: { id: upload.id },
-              data: { parsedContent: trimmedContent }
-            });
-            console.log('Updated record with parsed content');
-          } else {
-            console.log('PDF parsing returned empty content');
-          }
-        } catch (parseError) {
-          console.error('Error in background PDF parsing:', parseError);
-        }
-      })();
-    }
-
-    // Return success immediately, don't wait for parsing
-    return NextResponse.json({
-      success: true,
-      message: 'Material uploaded successfully',
-      uploadId: upload.id,
-    });
-    
   } catch (error) {
     console.error('Error uploading material:', error);
     const errorMessage = error instanceof Error ? error.message : String(error);

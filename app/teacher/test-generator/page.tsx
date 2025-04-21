@@ -26,6 +26,8 @@ interface Upload {
   materialType: string;
   subject: string;
   fileName: string;
+  isParsed?: boolean;
+  hasParsedContent: boolean;
 }
 
 const TeacherTestGenerator = () => {
@@ -62,7 +64,7 @@ const TeacherTestGenerator = () => {
   }, [isAuthenticated, isTeacher, router]);
 
   // Fetch materials from the API
-  const fetchMaterials = async () => {
+  const fetchMaterials = async (): Promise<Upload[]> => {
     setIsLoadingMaterials(true);
     try {
       const response = await fetch('/api/materials/get-materials');
@@ -72,10 +74,22 @@ const TeacherTestGenerator = () => {
       }
 
       const data = await response.json();
-      setMaterials(data.uploads || []);
+      
+      return data.uploads.map((material: any) => ({
+        id: material.id,
+        title: material.title,
+        fileUrl: material.fileUrl,
+        fileType: material.fileType,
+        materialType: material.materialType,
+        subject: material.subject,
+        createdAt: material.createdAt,
+        updatedAt: material.updatedAt,
+        hasParsedContent: material.hasParsedContent
+      }));
     } catch (error) {
       console.error('Error fetching materials:', error);
       toast.error('Failed to load materials. Please try again.');
+      return [];
     } finally {
       setIsLoadingMaterials(false);
     }
@@ -278,8 +292,12 @@ const TeacherTestGenerator = () => {
                       <SelectContent>
                         {materials.length > 0 ? (
                           materials.map((material) => (
-                            <SelectItem key={material.id} value={material.id}>
-                              {material.title}
+                            <SelectItem 
+                              key={material.id} 
+                              value={material.id}
+                              className={material.hasParsedContent ? "" : "text-gray-400"}
+                            >
+                              {material.title} {!material.hasParsedContent && " (Not parsed)"}
                             </SelectItem>
                           ))
                         ) : (
@@ -289,6 +307,9 @@ const TeacherTestGenerator = () => {
                         )}
                       </SelectContent>
                     </Select>
+                    <div className="text-xs text-muted-foreground mt-1">
+                      Materials with "✓" are ready for test generation
+                    </div>
                   </div>
                 </div>
                 
