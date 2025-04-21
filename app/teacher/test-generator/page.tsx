@@ -3,19 +3,21 @@
 import React, { useState, useEffect } from 'react';
 import PageHeader from '@/components/shared/PageHeader';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { motion } from 'framer-motion';
-import { FlaskConical, Plus, Minus, FileText, FileCheck, Download, AlarmCheck, Loader2, FileDown, RefreshCw } from 'lucide-react';
+import { FlaskConical, Plus, Minus, FileText, FileCheck, Download, AlarmCheck, Loader2, FileDown, RefreshCw, AlertCircle, CheckCircle, CheckIcon } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { SimplePDFDownloadButton } from '@/components/test/SimplePDFRenderer';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { FormControl } from '@/components/ui/form';
+import { Checkbox } from '@/components/ui/checkbox';
 
 // Interface for upload data
 interface Upload {
@@ -34,6 +36,20 @@ interface Upload {
   isReady?: boolean;
 }
 
+// Update the Material type to include parseStatus
+interface Material {
+  id: string;
+  title: string;
+  description: string | null;
+  fileUrl: string;
+  fileType: string;
+  uploadedAt: string;
+  parsedContent?: string | null;
+  parseStatus?: string;
+  isReady: boolean;
+  isPending: boolean;
+}
+
 const TeacherTestGenerator = () => {
   const [testTitle, setTestTitle] = useState('');
   const [testDescription, setTestDescription] = useState('');
@@ -42,7 +58,7 @@ const TeacherTestGenerator = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isGenerated, setIsGenerated] = useState(false);
   const [generatedTest, setGeneratedTest] = useState('');
-  const [materials, setMaterials] = useState<Upload[]>([]);
+  const [materials, setMaterials] = useState<Material[]>([]);
   const [isLoadingMaterials, setIsLoadingMaterials] = useState(false);
   const [isPdfLoading, setIsPdfLoading] = useState(false);
   
@@ -68,7 +84,7 @@ const TeacherTestGenerator = () => {
   }, [isAuthenticated, isTeacher, router]);
 
   // Fetch materials from the API
-  const fetchMaterials = async (): Promise<Upload[]> => {
+  const fetchMaterials = async (): Promise<Material[]> => {
     setIsLoadingMaterials(true);
     try {
       const response = await fetch('/api/materials/get-materials');
@@ -80,19 +96,17 @@ const TeacherTestGenerator = () => {
       const data = await response.json();
       
       // Set materials state (this assumes you have a setMaterials function)
-      const transformedMaterials = data.uploads.map((material: any) => ({
+      const transformedMaterials = data.materials.map((material: any): Material => ({
         id: material.id,
         title: material.title,
+        description: material.description,
         fileUrl: material.fileUrl,
         fileType: material.fileType,
-        materialType: material.materialType,
-        subject: material.subject,
-        createdAt: material.createdAt,
-        updatedAt: material.updatedAt,
-        hasParsedContent: material.hasParsedContent,
+        uploadedAt: new Date(material.uploadedAt).toLocaleDateString(),
+        parsedContent: material.parsedContent,
         parseStatus: material.parseStatus,
-        isPending: material.isPending,
-        isReady: material.isReady
+        isReady: material.parseStatus === "COMPLETED" && material.parsedContent,
+        isPending: material.parseStatus === "PROCESSING" || material.parseStatus === "PENDING",
       }));
       
       // Update state with the fetched materials
@@ -235,6 +249,44 @@ const TeacherTestGenerator = () => {
     return questions.reduce((total, question) => total + question.quantity, 0);
   };
 
+  // Add a function to trigger re-parsing of a failed PDF
+  const retryParsePdf = async (materialId: string) => {
+    if (!materialId) return;
+    
+    try {
+      toast.info("Starting PDF parsing...");
+      const response = await fetch("/api/materials/parse-pdf", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ uploadId: materialId }),
+      });
+      
+      if (!response.ok) {
+        throw new Error("Failed to start parsing");
+      }
+      
+      toast.success("PDF parsing started, please wait a moment and refresh");
+      // Refresh materials list after a delay
+      setTimeout(() => {
+        fetchMaterials();
+      }, 5000);
+    } catch (error) {
+      console.error("Error retrying PDF parsing:", error);
+      toast.error("Failed to start PDF parsing");
+    }
+  };
+
+  if (isLoadingMaterials) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        <p className="mt-4 text-lg">Loading materials...</p>
+      </div>
+    )
+  }
+
   return (
     <>
       <PageHeader 
@@ -316,10 +368,10 @@ const TeacherTestGenerator = () => {
                         </Tooltip>
                       </TooltipProvider>
                     </div>
-                    <Select 
-                      value={selectedMaterial} 
+                    <Select
+                      value={selectedMaterial}
                       onValueChange={setSelectedMaterial}
-                      disabled={isLoadingMaterials}
+                      disabled={isLoadingMaterials || isGenerating}
                     >
                       <SelectTrigger id="source">
                         <SelectValue placeholder={isLoadingMaterials ? "Loading materials..." : "Select material"} />
@@ -328,15 +380,30 @@ const TeacherTestGenerator = () => {
                         {materials.length > 0 ? (
                           materials.map((material) => (
                             <SelectItem 
-                              key={material.id} 
+                              key={material.id}
                               value={material.id}
-                              className={material.isReady ? "" : "text-gray-400"}
-                              disabled={material.isPending}
+                              disabled={!material.isReady}
+                              className="flex items-center justify-between"
                             >
-                              {material.title}
-                              {material.isPending && " (Processing...)"}
-                              {!material.isPending && !material.isReady && " (Not parsed)"}
-                              {material.isReady && " (✓)"}
+                              <div className="flex items-center justify-between w-full">
+                                <span className="truncate mr-2">{material.title}</span>
+                                {material.isPending && (
+                                  <span className="ml-auto flex items-center text-muted-foreground">
+                                    <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                                    <span className="text-xs">Processing</span>
+                                  </span>
+                                )}
+                                {material.parseStatus === "FAILED" && (
+                                  <span className="ml-auto text-destructive">
+                                    <AlertCircle className="h-4 w-4" />
+                                  </span>
+                                )}
+                                {material.isReady && (
+                                  <span className="ml-auto text-green-500">
+                                    <CheckCircle className="h-4 w-4" />
+                                  </span>
+                                )}
+                              </div>
                             </SelectItem>
                           ))
                         ) : (
@@ -347,7 +414,11 @@ const TeacherTestGenerator = () => {
                       </SelectContent>
                     </Select>
                     <div className="text-xs text-muted-foreground mt-1">
-                      Materials with "✓" are ready for test generation. If you've recently uploaded materials, they may still be processing. Use the refresh button to check their status.
+                      {isLoadingMaterials 
+                        ? "Loading materials..." 
+                        : materials.length === 0 
+                          ? "No materials available" 
+                          : "Select a material. Items that are still being processed or failed parsing are disabled."}
                     </div>
                   </div>
                 </div>
@@ -570,6 +641,31 @@ const TeacherTestGenerator = () => {
           </Card>
         </motion.div>
       </div>
+
+      {/* Add a retry button for failed materials */}
+      {materials.some(m => m.parseStatus === "FAILED") && (
+        <div className="mt-4 p-4 border rounded-lg bg-muted">
+          <p className="text-sm text-muted-foreground mb-2">
+            Some materials failed to process. You can try parsing them again:
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {materials
+              .filter(m => m.parseStatus === "FAILED")
+              .map(material => (
+                <Button
+                  key={material.id}
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-1 text-destructive border-destructive hover:bg-destructive/10"
+                  onClick={() => retryParsePdf(material.id)}
+                >
+                  <RefreshCw className="h-3 w-3" />
+                  <span className="truncate max-w-[150px]">{material.title}</span>
+                </Button>
+              ))}
+          </div>
+        </div>
+      )}
     </>
   );
 };

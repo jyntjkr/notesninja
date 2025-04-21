@@ -5,11 +5,9 @@ import { prisma } from '@/lib/prisma';
 import { parsePdfFromUrl } from '@/utils/pdfParser';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 
-// Long timeout for PDF parsing with a safety margin
-const PDF_PARSE_TIMEOUT = 45000; // 45 seconds (below Vercel's 50s limit)
-
-// Maximum content size to prevent database issues
-const MAX_CONTENT_LENGTH = 1000000; // 1MB limit
+// Optimize timeouts for serverless execution
+const PDF_PARSE_TIMEOUT = 25000; // 25 seconds for initial parsing
+const MAX_CONTENT_LENGTH = 800000; // 800KB limit for database storage
 
 export async function POST(request: Request) {
   console.log('POST /api/materials - Request received');
@@ -115,68 +113,56 @@ export async function POST(request: Request) {
               data: { parseStatus: 'PROCESSING' },
             });
             
-            // Since we don't want to block the response, we'll implement
-            // a more resilient parsing approach with built-in timeout
-            console.log('Beginning PDF content extraction for:', upload.fileUrl);
+            let parsedContent = '';
             
-            try {
-              // Step 1: Try to parse with standard timeout
-              const parsedContent = await parsePdfFromUrl(upload.fileUrl, PDF_PARSE_TIMEOUT);
-              
-              // Truncate if needed
-              const truncatedContent = parsedContent && parsedContent.length > MAX_CONTENT_LENGTH 
-                ? parsedContent.substring(0, MAX_CONTENT_LENGTH) 
-                : parsedContent;
+            // Try progressively with smaller chunks to ensure we get at least some content
+            const attempts = [
+              { maxPages: 0, timeout: PDF_PARSE_TIMEOUT }, // Try full document first
+              { maxPages: 15, timeout: 20000 },           // Try first 15 pages
+              { maxPages: 5, timeout: 15000 }            // Last attempt with just 5 pages
+            ];
+            
+            // Try each approach in sequence until one works
+            for (const attempt of attempts) {
+              try {
+                console.log(`Attempt parsing PDF with maxPages=${attempt.maxPages || 'all'}, timeout=${attempt.timeout}ms`);
+                const content = await parsePdfFromUrl(upload.fileUrl, attempt.timeout, 
+                  attempt.maxPages ? { maxPages: attempt.maxPages } : undefined
+                );
                 
-              // Update with parsed content
+                if (content && content.length > 0) {
+                  parsedContent = content;
+                  console.log(`Successfully parsed PDF with ${attempt.maxPages || 'all'} pages approach`);
+                  break; // Exit the loop if we got content
+                }
+              } catch (attemptError) {
+                console.error(`PDF parsing attempt failed:`, attemptError);
+                // Continue to next attempt
+              }
+            }
+            
+            // Limit parsed content size to prevent database issues
+            const truncatedContent = parsedContent && parsedContent.length > MAX_CONTENT_LENGTH 
+              ? parsedContent.substring(0, MAX_CONTENT_LENGTH) 
+              : parsedContent;
+              
+            // Update database with content (or FAILED status if no content)
+            if (truncatedContent && truncatedContent.length > 0) {
               await prisma.upload.update({
                 where: { id: upload.id },
                 data: { 
-                  parsedContent: truncatedContent || '',
-                  parseStatus: truncatedContent ? 'COMPLETED' : 'FAILED' 
+                  parsedContent: truncatedContent,
+                  parseStatus: 'COMPLETED' 
                 },
               });
-              
-              console.log('PDF parsing completed successfully for:', upload.id);
-            } catch (parseError) {
-              // If first attempt fails, log but don't set to FAILED yet
-              console.error('Initial PDF parsing attempt failed:', parseError);
-              
-              try {
-                console.log('Attempting fallback method for:', upload.id);
-                
-                // Step 2: Try a more resilient approach - fetch partial content
-                // First 10 pages are usually sufficient for test generation
-                const options = { maxPages: 10 };
-                const partialContent = await parsePdfFromUrl(upload.fileUrl, PDF_PARSE_TIMEOUT, options);
-                
-                if (partialContent && partialContent.length > 0) {
-                  // We at least got some content, which is better than nothing
-                  const safeContent = partialContent.length > MAX_CONTENT_LENGTH 
-                    ? partialContent.substring(0, MAX_CONTENT_LENGTH) 
-                    : partialContent;
-                  
-                  await prisma.upload.update({
-                    where: { id: upload.id },
-                    data: { 
-                      parsedContent: safeContent,
-                      parseStatus: 'COMPLETED' 
-                    },
-                  });
-                  
-                  console.log('PDF partial parsing completed successfully for:', upload.id);
-                } else {
-                  throw new Error('Failed to extract any content');
-                }
-              } catch (fallbackError) {
-                console.error('Fallback PDF parsing failed:', fallbackError);
-                
-                // Only now set status to failed
-                await prisma.upload.update({
-                  where: { id: upload.id },
-                  data: { parseStatus: 'FAILED' },
-                });
-              }
+              console.log(`PDF parsing completed successfully for: ${upload.id}, content size: ${truncatedContent.length}`);
+            } else {
+              // If all attempts failed, mark as failed
+              await prisma.upload.update({
+                where: { id: upload.id },
+                data: { parseStatus: 'FAILED' },
+              });
+              console.log(`PDF parsing failed for: ${upload.id}, no content extracted`);
             }
           } catch (processError) {
             console.error('Error during PDF parsing process:', processError);

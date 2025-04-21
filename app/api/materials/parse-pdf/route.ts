@@ -4,11 +4,9 @@ import { authOptions } from '@/lib/auth-options';
 import { prisma } from '@/lib/prisma';
 import { parsePdfFromUrl } from '@/utils/pdfParser';
 
-// Longer timeout for background parsing process
-const PDF_PARSE_TIMEOUT = 45000; // 45 seconds (below Vercel's 50s limit)
-
-// Maximum content size to prevent database issues
-const MAX_CONTENT_LENGTH = 1000000; // 1MB limit
+// Optimize timeouts for serverless execution
+const PDF_PARSE_TIMEOUT = 25000; // 25 seconds for initial parsing
+const MAX_CONTENT_LENGTH = 800000; // 800KB limit for database storage
 
 export async function POST(request: NextRequest) {
   try {
@@ -52,31 +50,39 @@ export async function POST(request: NextRequest) {
     });
 
     try {
-      // First attempt: Try to parse the entire PDF
-      console.log('Starting PDF parsing for:', upload.fileUrl);
-      let parsedContent = await parsePdfFromUrl(upload.fileUrl, PDF_PARSE_TIMEOUT);
+      let parsedContent = '';
+            
+      // Try progressively with smaller chunks to ensure we get at least some content
+      const attempts = [
+        { maxPages: 0, timeout: PDF_PARSE_TIMEOUT }, // Try full document first
+        { maxPages: 15, timeout: 20000 },           // Try first 15 pages
+        { maxPages: 5, timeout: 15000 }            // Last attempt with just 5 pages
+      ];
       
-      // If first attempt fails or returns empty, try with partial content
-      if (!parsedContent || parsedContent.length === 0) {
-        console.log('First parsing attempt returned no content, trying with maxPages limit');
-        // Fallback to parsing only first 10 pages
-        const options = { maxPages: 10 };
-        parsedContent = await parsePdfFromUrl(upload.fileUrl, PDF_PARSE_TIMEOUT, options);
-      }
-      
-      // If we still don't have content, try an even smaller chunk
-      if (!parsedContent || parsedContent.length === 0) {
-        console.log('Second parsing attempt failed, trying with smaller limit');
-        // Last resort: just try to get the first 3 pages
-        const options = { maxPages: 3 };
-        parsedContent = await parsePdfFromUrl(upload.fileUrl, PDF_PARSE_TIMEOUT, options);
+      // Try each approach in sequence until one works
+      for (const attempt of attempts) {
+        try {
+          console.log(`Attempt parsing PDF with maxPages=${attempt.maxPages || 'all'}, timeout=${attempt.timeout}ms`);
+          const content = await parsePdfFromUrl(upload.fileUrl, attempt.timeout, 
+            attempt.maxPages ? { maxPages: attempt.maxPages } : undefined
+          );
+          
+          if (content && content.length > 0) {
+            parsedContent = content;
+            console.log(`Successfully parsed PDF with ${attempt.maxPages || 'all'} pages approach`);
+            break; // Exit the loop if we got content
+          }
+        } catch (attemptError) {
+          console.error(`PDF parsing attempt failed:`, attemptError);
+          // Continue to next attempt
+        }
       }
       
       // Limit parsed content size to prevent database issues
       const truncatedContent = parsedContent && parsedContent.length > MAX_CONTENT_LENGTH 
         ? parsedContent.substring(0, MAX_CONTENT_LENGTH) 
         : parsedContent;
-
+      
       if (!truncatedContent || truncatedContent.length === 0) {
         throw new Error('Failed to extract any content from PDF');
       }
