@@ -10,11 +10,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { motion } from 'framer-motion';
-import { FlaskConical, Plus, Minus, FileText, FileCheck, Download, AlarmCheck, Loader2, FileDown } from 'lucide-react';
+import { FlaskConical, Plus, Minus, FileText, FileCheck, Download, AlarmCheck, Loader2, FileDown, RefreshCw } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { SimplePDFDownloadButton } from '@/components/test/SimplePDFRenderer';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 // Interface for upload data
 interface Upload {
@@ -28,6 +29,9 @@ interface Upload {
   fileName: string;
   isParsed?: boolean;
   hasParsedContent: boolean;
+  parseStatus?: string;
+  isPending?: boolean;
+  isReady?: boolean;
 }
 
 const TeacherTestGenerator = () => {
@@ -75,7 +79,8 @@ const TeacherTestGenerator = () => {
 
       const data = await response.json();
       
-      return data.uploads.map((material: any) => ({
+      // Set materials state (this assumes you have a setMaterials function)
+      const transformedMaterials = data.uploads.map((material: any) => ({
         id: material.id,
         title: material.title,
         fileUrl: material.fileUrl,
@@ -84,8 +89,16 @@ const TeacherTestGenerator = () => {
         subject: material.subject,
         createdAt: material.createdAt,
         updatedAt: material.updatedAt,
-        hasParsedContent: material.hasParsedContent
+        hasParsedContent: material.hasParsedContent,
+        parseStatus: material.parseStatus,
+        isPending: material.isPending,
+        isReady: material.isReady
       }));
+      
+      // Update state with the fetched materials
+      setMaterials(transformedMaterials);
+      
+      return transformedMaterials;
     } catch (error) {
       console.error('Error fetching materials:', error);
       toast.error('Failed to load materials. Please try again.');
@@ -280,7 +293,29 @@ const TeacherTestGenerator = () => {
                   </div>
                   
                   <div className="space-y-2">
-                    <Label htmlFor="source">Source Material</Label>
+                    <div className="flex justify-between items-center">
+                      <Label htmlFor="source">Source Material</Label>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button 
+                              type="button" 
+                              variant="ghost" 
+                              size="sm" 
+                              onClick={() => fetchMaterials()}
+                              disabled={isLoadingMaterials}
+                              className="h-8 w-8 p-0"
+                            >
+                              <RefreshCw className={`h-4 w-4 ${isLoadingMaterials ? 'animate-spin' : ''}`} />
+                              <span className="sr-only">Refresh materials</span>
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Refresh material list to see newly processed materials</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
                     <Select 
                       value={selectedMaterial} 
                       onValueChange={setSelectedMaterial}
@@ -295,9 +330,13 @@ const TeacherTestGenerator = () => {
                             <SelectItem 
                               key={material.id} 
                               value={material.id}
-                              className={material.hasParsedContent ? "" : "text-gray-400"}
+                              className={material.isReady ? "" : "text-gray-400"}
+                              disabled={material.isPending}
                             >
-                              {material.title} {!material.hasParsedContent && " (Not parsed)"}
+                              {material.title}
+                              {material.isPending && " (Processing...)"}
+                              {!material.isPending && !material.isReady && " (Not parsed)"}
+                              {material.isReady && " (✓)"}
                             </SelectItem>
                           ))
                         ) : (
@@ -308,7 +347,7 @@ const TeacherTestGenerator = () => {
                       </SelectContent>
                     </Select>
                     <div className="text-xs text-muted-foreground mt-1">
-                      Materials with "✓" are ready for test generation
+                      Materials with "✓" are ready for test generation. If you've recently uploaded materials, they may still be processing. Use the refresh button to check their status.
                     </div>
                   </div>
                 </div>

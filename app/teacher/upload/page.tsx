@@ -6,17 +6,18 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { motion } from 'framer-motion';
-import { Upload, FileType, FileText, Image, BookText, PlusCircle, Check } from 'lucide-react';
-import { useAuth } from '@/hooks/use-auth';
-import { useRouter } from 'next/navigation';
+import { FileText, PlusCircle, Check, X, AlertTriangle } from 'lucide-react';
 import { UploadDropzone } from '@/utils/uploadthing';
 import type { UploadFileResponse } from 'uploadthing/client';
+import { useAuth } from '@/hooks/use-auth';
+import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { prisma } from '@/lib/prisma';
+import { useParseStatus } from '@/hooks/use-parse-status';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 // Define types for the upload response
 interface UploadedFile {
@@ -36,10 +37,30 @@ const TeacherUpload = () => {
   const [materialSubject, setMaterialSubject] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [uploadedId, setUploadedId] = useState<string | null>(null);
+  const [isPdf, setIsPdf] = useState(false);
 
   // Authentication check
   const { isAuthenticated, isTeacher } = useAuth();
   const router = useRouter();
+
+  // Parse status monitoring
+  const {
+    status: parseStatus,
+    isPolling,
+    isPending,
+    isProcessing,
+    isCompleted,
+    isFailed,
+  } = useParseStatus({
+    uploadId: uploadedId || '',
+    onComplete: () => {
+      toast.success('PDF processing completed successfully!');
+    },
+    onError: () => {
+      toast.error('PDF processing failed. The material can still be used, but AI features may be limited.');
+    }
+  });
 
   React.useEffect(() => {
     if (!isAuthenticated) {
@@ -57,31 +78,15 @@ const TeacherUpload = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!uploadedFile) {
-      toast.error("Please upload a file first");
-      return;
-    }
-    
-    // Validate required fields
-    if (!materialTitle.trim()) {
-      toast.error("Please enter a title for the material");
-      return;
-    }
-    
-    if (!materialSubject) {
-      toast.error("Please select a subject");
-      return;
-    }
-    
-    if (!materialDescription.trim()) {
-      toast.error("Please provide a description");
+    if (!uploadedFile || !materialTitle || !materialSubject) {
+      toast.error('Please fill in all required fields');
       return;
     }
     
     setIsSubmitting(true);
     
     try {
-      // Call API to save the material to the database
+      // Upload the file details to our API
       const response = await fetch('/api/materials', {
         method: 'POST',
         headers: {
@@ -99,154 +104,120 @@ const TeacherUpload = () => {
           fileKey: uploadedFile.fileKey,
         }),
       });
-
-      const data = await response.json();
       
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to save material');
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to upload material');
       }
-
-      // Success!
-      setIsSubmitted(true);
-      toast.success("Material uploaded successfully!");
       
-      // Reset form after a delay
+      const data = await response.json();
+      
+      // If successful, mark as submitted and show success message
+      setIsSubmitted(true);
+      setUploadedId(data.uploadId);
+      setIsPdf(data.isPdf);
+      
+      toast.success('Material uploaded successfully!');
+      
+      // Redirect after a delay
       setTimeout(() => {
-        setIsSubmitted(false);
-        setUploadedFile(null);
-        setMaterialTitle('');
-        setMaterialDescription('');
-        setMaterialType('notes');
-        setMaterialSubject('');
-      }, 3000);
+        router.push('/teacher/dashboard');
+      }, 2000);
+      
     } catch (error) {
-      console.error('Error saving material:', error);
-      toast.error(error instanceof Error ? error.message : "Failed to save material. Please try again.");
+      console.error('Error uploading material:', error);
+      toast.error(error instanceof Error ? error.message : 'An error occurred while uploading');
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  const handleFileUploaded = (file: UploadedFile) => {
+    setUploadedFile(file);
+    setIsPdf(file.fileType === 'application/pdf' || file.fileName.toLowerCase().endsWith('.pdf'));
+  };
+
   return (
     <>
       <PageHeader 
-        title="Upload Material" 
-        description="Share educational content with your students."
+        title="Upload Teaching Material" 
+        description="Share notes, slides, worksheets, and other resources with your students."
       />
       
-      <form onSubmit={handleSubmit} className="space-y-8">
+      <form onSubmit={handleSubmit}>
         <div className="grid md:grid-cols-2 gap-6">
           <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
           >
-            <div className="space-y-4">
-              <h2 className="text-lg font-medium">1. Upload Document</h2>
+            <div className="space-y-6">
+              <h2 className="text-lg font-medium">1. Select File</h2>
               
-              <Card className="border-dashed">
+              <Card>
                 <CardContent className="pt-6">
-                  <div className="flex flex-col items-center justify-center py-10 px-6">
-                    {!uploadedFile ? (
-                      <>
-                        <UploadDropzone
-                          endpoint="teacherDocumentUploader"
-                          onUploadBegin={() => {
-                            setIsUploading(true);
-                          }}
-                          onUploadProgress={(progress: number) => {
-                            console.log(`Upload progress: ${progress}%`);
-                          }}
-                          onClientUploadComplete={(res?: UploadFileResponse[]) => {
-                            setIsUploading(false);
-                            if (res && res.length > 0) {
-                              // Try to determine file type from file extension
-                              const fileName = res[0].name;
-                              let fileType = '';
-                              
-                              if (fileName) {
-                                const extension = fileName.split('.').pop()?.toLowerCase();
-                                if (extension === 'pdf') {
-                                  fileType = 'application/pdf';
-                                } else if (['doc', 'docx'].includes(extension || '')) {
-                                  fileType = 'application/msword';
-                                } else if (['jpg', 'jpeg', 'png'].includes(extension || '')) {
-                                  fileType = `image/${extension}`;
-                                } else if (extension === 'txt') {
-                                  fileType = 'text/plain';
-                                }
-                              }
-                              
-                              setUploadedFile({
-                                fileUrl: res[0].url,
-                                fileKey: res[0].key,
-                                fileName: res[0].name,
-                                fileSize: res[0].size,
-                                fileType: fileType
-                              });
-                              toast.success("File uploaded successfully!");
+                  {!uploadedFile ? (
+                    <UploadDropzone 
+                      endpoint="teacherDocumentUploader"
+                      onUploadBegin={() => setIsUploading(true)}
+                      onClientUploadComplete={(res) => {
+                        if (res && res.length > 0) {
+                          // Determine file type from extension
+                          const fileName = res[0].name;
+                          let fileType = 'application/octet-stream';
+                          
+                          if (fileName) {
+                            const extension = fileName.split('.').pop()?.toLowerCase();
+                            if (extension === 'pdf') {
+                              fileType = 'application/pdf';
+                            } else if (['doc', 'docx'].includes(extension || '')) {
+                              fileType = 'application/msword';
+                            } else if (['jpg', 'jpeg', 'png'].includes(extension || '')) {
+                              fileType = `image/${extension}`;
+                            } else if (extension === 'txt') {
+                              fileType = 'text/plain';
                             }
-                          }}
-                          onUploadError={(error: Error) => {
-                            setIsUploading(false);
-                            toast.error(`Error uploading file: ${error.message}`);
-                          }}
-                          className="w-full"
-                        />
-                      </>
-                    ) : (
-                      <>
-                        <div className="mb-4 bg-primary/10 p-4 rounded-full">
-                          <Upload className="h-8 w-8 text-primary" />
+                          }
+                          
+                          handleFileUploaded({
+                            fileUrl: res[0].url,
+                            fileKey: res[0].key,
+                            fileName: res[0].name,
+                            fileSize: res[0].size,
+                            fileType: fileType
+                          });
+                        }
+                      }}
+                      onUploadError={(error) => {
+                        toast.error(`Upload error: ${error.message}`);
+                      }}
+                    />
+                  ) : (
+                    <div className="border rounded-md p-4 relative">
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        type="button"
+                        className="absolute top-2 right-2"
+                        onClick={() => setUploadedFile(null)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                      
+                      <div className="flex items-center space-x-4">
+                        <FileText className="h-10 w-10 text-primary" />
+                        <div className="flex-1 space-y-1">
+                          <div className="font-medium">{uploadedFile.fileName}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {uploadedFile.fileType} • {(uploadedFile.fileSize / (1024 * 1024)).toFixed(2)} MB
+                          </div>
                         </div>
-                        <h3 className="text-lg font-medium mb-2">File uploaded successfully</h3>
-                        <p className="text-sm text-muted-foreground text-center mb-4">
-                          {uploadedFile.fileName} • {(uploadedFile.fileSize / 1024 / 1024).toFixed(2)} MB
-                        </p>
-                        <div className="flex space-x-3">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => setUploadedFile(null)}
-                          >
-                            Remove
-                          </Button>
-                        </div>
-                      </>
-                    )}
-                  </div>
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
               
-              <div className="flex items-center space-x-4 pt-2">
-                <div className="grid grid-cols-4 gap-2 flex-1">
-                  <div className="flex items-center space-x-2">
-                    <FileType className="h-4 w-4 text-blue-500" />
-                    <span className="text-sm">PDF</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Image className="h-4 w-4 text-green-500" />
-                    <span className="text-sm">Images</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <FileText className="h-4 w-4 text-orange-500" />
-                    <span className="text-sm">Documents</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <BookText className="h-4 w-4 text-purple-500" />
-                    <span className="text-sm">Slides</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-          
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.3, delay: 0.1 }}
-          >
-            <div className="space-y-4">
               <h2 className="text-lg font-medium">2. Material Details</h2>
               
               <Card>
@@ -337,66 +308,18 @@ const TeacherUpload = () => {
         >
           <Separator className="my-6" />
           
-          <div className="flex flex-col sm:flex-row sm:justify-between gap-4">
-            <div>
-              <h2 className="text-lg font-medium mb-2">3. Sharing Options</h2>
-              <p className="text-sm text-muted-foreground">
-                Choose how you want to share this material with your students.
-              </p>
-            </div>
-            
-            <Card className="w-full sm:w-1/2">
-              <CardContent className="pt-6">
-                <div className="space-y-4">
-                  <div className="flex items-start space-x-3">
-                    <input
-                      type="radio"
-                      id="share-all"
-                      name="sharing"
-                      className="mt-1"
-                      defaultChecked
-                    />
-                    <div>
-                      <Label htmlFor="share-all" className="font-medium">Share with all students</Label>
-                      <p className="text-sm text-muted-foreground">
-                        All students in your classes will have access to this material.
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-start space-x-3">
-                    <input
-                      type="radio"
-                      id="share-specific"
-                      name="sharing"
-                      className="mt-1"
-                    />
-                    <div>
-                      <Label htmlFor="share-specific" className="font-medium">Share with specific classes</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Select specific classes that will have access to this material.
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-start space-x-3">
-                    <input
-                      type="radio"
-                      id="share-link"
-                      name="sharing"
-                      className="mt-1"
-                    />
-                    <div>
-                      <Label htmlFor="share-link" className="font-medium">Share via link only</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Only students with the link will have access to this material.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+          {isSubmitted && isPdf && (
+            <Alert className="my-4" variant={isFailed ? "destructive" : isCompleted ? "default" : "default"}>
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>PDF Processing {isCompleted ? "Complete" : isFailed ? "Failed" : "In Progress"}</AlertTitle>
+              <AlertDescription>
+                {isPending && "Your PDF is queued for processing. This will enable AI features like test generation."}
+                {isProcessing && "Your PDF is being processed. This may take a few minutes depending on the file size."}
+                {isCompleted && "Your PDF has been successfully processed and is ready for AI features."}
+                {isFailed && "PDF processing failed. The material can still be used, but AI features may be limited."}
+              </AlertDescription>
+            </Alert>
+          )}
           
           <div className="mt-8 flex justify-end gap-3">
             <Button type="button" variant="outline">Save as Draft</Button>

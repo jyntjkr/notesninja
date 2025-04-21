@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { FileText, Users, Clipboard, GraduationCap, Clock, Download } from 'lucide-react';
+import { FileText, Users, Clipboard, GraduationCap, Clock, Download, CheckCircle, AlertCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Icons } from '@/components/shared/icons';
 import { toast } from 'sonner';
@@ -27,6 +27,10 @@ interface Material {
   createdAt: string;
   dateDisplay: string;
   daysAgo: number;
+  parseStatus?: string;
+  isPending?: boolean;
+  isReady?: boolean;
+  hasParsedContent?: boolean;
 }
 
 export default function TeacherDashboard() {
@@ -228,6 +232,28 @@ export default function TeacherDashboard() {
                           <div className="text-xs text-muted-foreground">
                             {(item.fileSize / (1024 * 1024)).toFixed(2)} MB
                           </div>
+                          {item.fileUrl.toLowerCase().endsWith('.pdf') && (
+                            <>
+                              {item.isPending && (
+                                <div className="text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded-full flex items-center">
+                                  <Icons.spinner className="h-3 w-3 mr-1 animate-spin" />
+                                  Processing
+                                </div>
+                              )}
+                              {item.isReady && (
+                                <div className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full flex items-center">
+                                  <CheckCircle className="h-3 w-3 mr-1" />
+                                  Ready
+                                </div>
+                              )}
+                              {!item.isPending && !item.isReady && (
+                                <div className="text-xs bg-red-100 text-red-800 px-2 py-0.5 rounded-full flex items-center">
+                                  <AlertCircle className="h-3 w-3 mr-1" />
+                                  Failed
+                                </div>
+                              )}
+                            </>
+                          )}
                         </div>
                         
                         {item.description && (
@@ -300,6 +326,28 @@ export default function TeacherDashboard() {
                           <div className="text-xs text-muted-foreground">
                             {(item.fileSize / (1024 * 1024)).toFixed(2)} MB
                           </div>
+                          {item.fileUrl.toLowerCase().endsWith('.pdf') && (
+                            <>
+                              {item.isPending && (
+                                <div className="text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded-full flex items-center">
+                                  <Icons.spinner className="h-3 w-3 mr-1 animate-spin" />
+                                  Processing
+                                </div>
+                              )}
+                              {item.isReady && (
+                                <div className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full flex items-center">
+                                  <CheckCircle className="h-3 w-3 mr-1" />
+                                  Ready
+                                </div>
+                              )}
+                              {!item.isPending && !item.isReady && (
+                                <div className="text-xs bg-red-100 text-red-800 px-2 py-0.5 rounded-full flex items-center">
+                                  <AlertCircle className="h-3 w-3 mr-1" />
+                                  Failed
+                                </div>
+                              )}
+                            </>
+                          )}
                         </div>
                         
                         {item.description && (

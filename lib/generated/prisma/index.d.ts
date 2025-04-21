@@ -75,11 +75,25 @@ export namespace $Enums {
 
 export type UserRole = (typeof UserRole)[keyof typeof UserRole]
 
+
+export const ParseStatus: {
+  PENDING: 'PENDING',
+  PROCESSING: 'PROCESSING',
+  COMPLETED: 'COMPLETED',
+  FAILED: 'FAILED'
+};
+
+export type ParseStatus = (typeof ParseStatus)[keyof typeof ParseStatus]
+
 }
 
 export type UserRole = $Enums.UserRole
 
 export const UserRole: typeof $Enums.UserRole
+
+export type ParseStatus = $Enums.ParseStatus
+
+export const ParseStatus: typeof $Enums.ParseStatus
 
 /**
  * ##  Prisma Client ʲˢ
@@ -9545,6 +9559,7 @@ export namespace Prisma {
     fileSize: number | null
     fileKey: string | null
     parsedContent: string | null
+    parseStatus: $Enums.ParseStatus | null
     createdAt: Date | null
     updatedAt: Date | null
     userId: string | null
@@ -9562,6 +9577,7 @@ export namespace Prisma {
     fileSize: number | null
     fileKey: string | null
     parsedContent: string | null
+    parseStatus: $Enums.ParseStatus | null
     createdAt: Date | null
     updatedAt: Date | null
     userId: string | null
@@ -9579,6 +9595,7 @@ export namespace Prisma {
     fileSize: number
     fileKey: number
     parsedContent: number
+    parseStatus: number
     createdAt: number
     updatedAt: number
     userId: number
@@ -9606,6 +9623,7 @@ export namespace Prisma {
     fileSize?: true
     fileKey?: true
     parsedContent?: true
+    parseStatus?: true
     createdAt?: true
     updatedAt?: true
     userId?: true
@@ -9623,6 +9641,7 @@ export namespace Prisma {
     fileSize?: true
     fileKey?: true
     parsedContent?: true
+    parseStatus?: true
     createdAt?: true
     updatedAt?: true
     userId?: true
@@ -9640,6 +9659,7 @@ export namespace Prisma {
     fileSize?: true
     fileKey?: true
     parsedContent?: true
+    parseStatus?: true
     createdAt?: true
     updatedAt?: true
     userId?: true
@@ -9744,6 +9764,7 @@ export namespace Prisma {
     fileSize: number
     fileKey: string
     parsedContent: string | null
+    parseStatus: $Enums.ParseStatus
     createdAt: Date
     updatedAt: Date
     userId: string
@@ -9780,6 +9801,7 @@ export namespace Prisma {
     fileSize?: boolean
     fileKey?: boolean
     parsedContent?: boolean
+    parseStatus?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     userId?: boolean
@@ -9798,6 +9820,7 @@ export namespace Prisma {
     fileSize?: boolean
     fileKey?: boolean
     parsedContent?: boolean
+    parseStatus?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     userId?: boolean
@@ -9816,6 +9839,7 @@ export namespace Prisma {
     fileSize?: boolean
     fileKey?: boolean
     parsedContent?: boolean
+    parseStatus?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     userId?: boolean
@@ -9834,12 +9858,13 @@ export namespace Prisma {
     fileSize?: boolean
     fileKey?: boolean
     parsedContent?: boolean
+    parseStatus?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     userId?: boolean
   }
 
-  export type UploadOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "title" | "fileUrl" | "fileType" | "description" | "materialType" | "subject" | "fileName" | "fileSize" | "fileKey" | "parsedContent" | "createdAt" | "updatedAt" | "userId", ExtArgs["result"]["upload"]>
+  export type UploadOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "title" | "fileUrl" | "fileType" | "description" | "materialType" | "subject" | "fileName" | "fileSize" | "fileKey" | "parsedContent" | "parseStatus" | "createdAt" | "updatedAt" | "userId", ExtArgs["result"]["upload"]>
   export type UploadInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     user?: boolean | UserDefaultArgs<ExtArgs>
   }
@@ -9867,6 +9892,7 @@ export namespace Prisma {
       fileSize: number
       fileKey: string
       parsedContent: string | null
+      parseStatus: $Enums.ParseStatus
       createdAt: Date
       updatedAt: Date
       userId: string
@@ -10305,6 +10331,7 @@ export namespace Prisma {
     readonly fileSize: FieldRef<"Upload", 'Int'>
     readonly fileKey: FieldRef<"Upload", 'String'>
     readonly parsedContent: FieldRef<"Upload", 'String'>
+    readonly parseStatus: FieldRef<"Upload", 'ParseStatus'>
     readonly createdAt: FieldRef<"Upload", 'DateTime'>
     readonly updatedAt: FieldRef<"Upload", 'DateTime'>
     readonly userId: FieldRef<"Upload", 'String'>
@@ -12998,6 +13025,7 @@ export namespace Prisma {
     fileSize: 'fileSize',
     fileKey: 'fileKey',
     parsedContent: 'parsedContent',
+    parseStatus: 'parseStatus',
     createdAt: 'createdAt',
     updatedAt: 'updatedAt',
     userId: 'userId'
@@ -13104,6 +13132,20 @@ export namespace Prisma {
    * Reference to a field of type 'Boolean'
    */
   export type BooleanFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Boolean'>
+    
+
+
+  /**
+   * Reference to a field of type 'ParseStatus'
+   */
+  export type EnumParseStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ParseStatus'>
+    
+
+
+  /**
+   * Reference to a field of type 'ParseStatus[]'
+   */
+  export type ListEnumParseStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'ParseStatus[]'>
     
 
 
@@ -13596,6 +13638,7 @@ export namespace Prisma {
     fileSize?: IntFilter<"Upload"> | number
     fileKey?: StringFilter<"Upload"> | string
     parsedContent?: StringNullableFilter<"Upload"> | string | null
+    parseStatus?: EnumParseStatusFilter<"Upload"> | $Enums.ParseStatus
     createdAt?: DateTimeFilter<"Upload"> | Date | string
     updatedAt?: DateTimeFilter<"Upload"> | Date | string
     userId?: StringFilter<"Upload"> | string
@@ -13614,6 +13657,7 @@ export namespace Prisma {
     fileSize?: SortOrder
     fileKey?: SortOrder
     parsedContent?: SortOrderInput | SortOrder
+    parseStatus?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     userId?: SortOrder
@@ -13635,6 +13679,7 @@ export namespace Prisma {
     fileSize?: IntFilter<"Upload"> | number
     fileKey?: StringFilter<"Upload"> | string
     parsedContent?: StringNullableFilter<"Upload"> | string | null
+    parseStatus?: EnumParseStatusFilter<"Upload"> | $Enums.ParseStatus
     createdAt?: DateTimeFilter<"Upload"> | Date | string
     updatedAt?: DateTimeFilter<"Upload"> | Date | string
     userId?: StringFilter<"Upload"> | string
@@ -13653,6 +13698,7 @@ export namespace Prisma {
     fileSize?: SortOrder
     fileKey?: SortOrder
     parsedContent?: SortOrderInput | SortOrder
+    parseStatus?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     userId?: SortOrder
@@ -13678,6 +13724,7 @@ export namespace Prisma {
     fileSize?: IntWithAggregatesFilter<"Upload"> | number
     fileKey?: StringWithAggregatesFilter<"Upload"> | string
     parsedContent?: StringNullableWithAggregatesFilter<"Upload"> | string | null
+    parseStatus?: EnumParseStatusWithAggregatesFilter<"Upload"> | $Enums.ParseStatus
     createdAt?: DateTimeWithAggregatesFilter<"Upload"> | Date | string
     updatedAt?: DateTimeWithAggregatesFilter<"Upload"> | Date | string
     userId?: StringWithAggregatesFilter<"Upload"> | string
@@ -14301,6 +14348,7 @@ export namespace Prisma {
     fileSize?: number
     fileKey?: string
     parsedContent?: string | null
+    parseStatus?: $Enums.ParseStatus
     createdAt?: Date | string
     updatedAt?: Date | string
     user: UserCreateNestedOneWithoutUploadsInput
@@ -14318,6 +14366,7 @@ export namespace Prisma {
     fileSize?: number
     fileKey?: string
     parsedContent?: string | null
+    parseStatus?: $Enums.ParseStatus
     createdAt?: Date | string
     updatedAt?: Date | string
     userId: string
@@ -14335,6 +14384,7 @@ export namespace Prisma {
     fileSize?: IntFieldUpdateOperationsInput | number
     fileKey?: StringFieldUpdateOperationsInput | string
     parsedContent?: NullableStringFieldUpdateOperationsInput | string | null
+    parseStatus?: EnumParseStatusFieldUpdateOperationsInput | $Enums.ParseStatus
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     user?: UserUpdateOneRequiredWithoutUploadsNestedInput
@@ -14352,6 +14402,7 @@ export namespace Prisma {
     fileSize?: IntFieldUpdateOperationsInput | number
     fileKey?: StringFieldUpdateOperationsInput | string
     parsedContent?: NullableStringFieldUpdateOperationsInput | string | null
+    parseStatus?: EnumParseStatusFieldUpdateOperationsInput | $Enums.ParseStatus
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     userId?: StringFieldUpdateOperationsInput | string
@@ -14369,6 +14420,7 @@ export namespace Prisma {
     fileSize?: number
     fileKey?: string
     parsedContent?: string | null
+    parseStatus?: $Enums.ParseStatus
     createdAt?: Date | string
     updatedAt?: Date | string
     userId: string
@@ -14386,6 +14438,7 @@ export namespace Prisma {
     fileSize?: IntFieldUpdateOperationsInput | number
     fileKey?: StringFieldUpdateOperationsInput | string
     parsedContent?: NullableStringFieldUpdateOperationsInput | string | null
+    parseStatus?: EnumParseStatusFieldUpdateOperationsInput | $Enums.ParseStatus
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -14402,6 +14455,7 @@ export namespace Prisma {
     fileSize?: IntFieldUpdateOperationsInput | number
     fileKey?: StringFieldUpdateOperationsInput | string
     parsedContent?: NullableStringFieldUpdateOperationsInput | string | null
+    parseStatus?: EnumParseStatusFieldUpdateOperationsInput | $Enums.ParseStatus
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     userId?: StringFieldUpdateOperationsInput | string
@@ -14997,6 +15051,13 @@ export namespace Prisma {
     not?: NestedIntFilter<$PrismaModel> | number
   }
 
+  export type EnumParseStatusFilter<$PrismaModel = never> = {
+    equals?: $Enums.ParseStatus | EnumParseStatusFieldRefInput<$PrismaModel>
+    in?: $Enums.ParseStatus[] | ListEnumParseStatusFieldRefInput<$PrismaModel>
+    notIn?: $Enums.ParseStatus[] | ListEnumParseStatusFieldRefInput<$PrismaModel>
+    not?: NestedEnumParseStatusFilter<$PrismaModel> | $Enums.ParseStatus
+  }
+
   export type UploadCountOrderByAggregateInput = {
     id?: SortOrder
     title?: SortOrder
@@ -15009,6 +15070,7 @@ export namespace Prisma {
     fileSize?: SortOrder
     fileKey?: SortOrder
     parsedContent?: SortOrder
+    parseStatus?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     userId?: SortOrder
@@ -15030,6 +15092,7 @@ export namespace Prisma {
     fileSize?: SortOrder
     fileKey?: SortOrder
     parsedContent?: SortOrder
+    parseStatus?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     userId?: SortOrder
@@ -15047,6 +15110,7 @@ export namespace Prisma {
     fileSize?: SortOrder
     fileKey?: SortOrder
     parsedContent?: SortOrder
+    parseStatus?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     userId?: SortOrder
@@ -15070,6 +15134,16 @@ export namespace Prisma {
     _sum?: NestedIntFilter<$PrismaModel>
     _min?: NestedIntFilter<$PrismaModel>
     _max?: NestedIntFilter<$PrismaModel>
+  }
+
+  export type EnumParseStatusWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: $Enums.ParseStatus | EnumParseStatusFieldRefInput<$PrismaModel>
+    in?: $Enums.ParseStatus[] | ListEnumParseStatusFieldRefInput<$PrismaModel>
+    notIn?: $Enums.ParseStatus[] | ListEnumParseStatusFieldRefInput<$PrismaModel>
+    not?: NestedEnumParseStatusWithAggregatesFilter<$PrismaModel> | $Enums.ParseStatus
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedEnumParseStatusFilter<$PrismaModel>
+    _max?: NestedEnumParseStatusFilter<$PrismaModel>
   }
 
   export type ReviewCountOrderByAggregateInput = {
@@ -15579,6 +15653,10 @@ export namespace Prisma {
     divide?: number
   }
 
+  export type EnumParseStatusFieldUpdateOperationsInput = {
+    set?: $Enums.ParseStatus
+  }
+
   export type UserUpdateOneRequiredWithoutUploadsNestedInput = {
     create?: XOR<UserCreateWithoutUploadsInput, UserUncheckedCreateWithoutUploadsInput>
     connectOrCreate?: UserCreateOrConnectWithoutUploadsInput
@@ -15789,6 +15867,13 @@ export namespace Prisma {
     _max?: NestedBoolFilter<$PrismaModel>
   }
 
+  export type NestedEnumParseStatusFilter<$PrismaModel = never> = {
+    equals?: $Enums.ParseStatus | EnumParseStatusFieldRefInput<$PrismaModel>
+    in?: $Enums.ParseStatus[] | ListEnumParseStatusFieldRefInput<$PrismaModel>
+    notIn?: $Enums.ParseStatus[] | ListEnumParseStatusFieldRefInput<$PrismaModel>
+    not?: NestedEnumParseStatusFilter<$PrismaModel> | $Enums.ParseStatus
+  }
+
   export type NestedIntWithAggregatesFilter<$PrismaModel = never> = {
     equals?: number | IntFieldRefInput<$PrismaModel>
     in?: number[] | ListIntFieldRefInput<$PrismaModel>
@@ -15814,6 +15899,16 @@ export namespace Prisma {
     gt?: number | FloatFieldRefInput<$PrismaModel>
     gte?: number | FloatFieldRefInput<$PrismaModel>
     not?: NestedFloatFilter<$PrismaModel> | number
+  }
+
+  export type NestedEnumParseStatusWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: $Enums.ParseStatus | EnumParseStatusFieldRefInput<$PrismaModel>
+    in?: $Enums.ParseStatus[] | ListEnumParseStatusFieldRefInput<$PrismaModel>
+    notIn?: $Enums.ParseStatus[] | ListEnumParseStatusFieldRefInput<$PrismaModel>
+    not?: NestedEnumParseStatusWithAggregatesFilter<$PrismaModel> | $Enums.ParseStatus
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedEnumParseStatusFilter<$PrismaModel>
+    _max?: NestedEnumParseStatusFilter<$PrismaModel>
   }
 
   export type UserCreateWithoutAccountsInput = {
@@ -16082,6 +16177,7 @@ export namespace Prisma {
     fileSize?: number
     fileKey?: string
     parsedContent?: string | null
+    parseStatus?: $Enums.ParseStatus
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -16098,6 +16194,7 @@ export namespace Prisma {
     fileSize?: number
     fileKey?: string
     parsedContent?: string | null
+    parseStatus?: $Enums.ParseStatus
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -16335,6 +16432,7 @@ export namespace Prisma {
     fileSize?: IntFilter<"Upload"> | number
     fileKey?: StringFilter<"Upload"> | string
     parsedContent?: StringNullableFilter<"Upload"> | string | null
+    parseStatus?: EnumParseStatusFilter<"Upload"> | $Enums.ParseStatus
     createdAt?: DateTimeFilter<"Upload"> | Date | string
     updatedAt?: DateTimeFilter<"Upload"> | Date | string
     userId?: StringFilter<"Upload"> | string
@@ -16996,6 +17094,7 @@ export namespace Prisma {
     fileSize?: number
     fileKey?: string
     parsedContent?: string | null
+    parseStatus?: $Enums.ParseStatus
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -17128,6 +17227,7 @@ export namespace Prisma {
     fileSize?: IntFieldUpdateOperationsInput | number
     fileKey?: StringFieldUpdateOperationsInput | string
     parsedContent?: NullableStringFieldUpdateOperationsInput | string | null
+    parseStatus?: EnumParseStatusFieldUpdateOperationsInput | $Enums.ParseStatus
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -17144,6 +17244,7 @@ export namespace Prisma {
     fileSize?: IntFieldUpdateOperationsInput | number
     fileKey?: StringFieldUpdateOperationsInput | string
     parsedContent?: NullableStringFieldUpdateOperationsInput | string | null
+    parseStatus?: EnumParseStatusFieldUpdateOperationsInput | $Enums.ParseStatus
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -17160,6 +17261,7 @@ export namespace Prisma {
     fileSize?: IntFieldUpdateOperationsInput | number
     fileKey?: StringFieldUpdateOperationsInput | string
     parsedContent?: NullableStringFieldUpdateOperationsInput | string | null
+    parseStatus?: EnumParseStatusFieldUpdateOperationsInput | $Enums.ParseStatus
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }

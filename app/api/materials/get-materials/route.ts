@@ -32,6 +32,7 @@ export async function GET(req: NextRequest) {
         createdAt: true,
         updatedAt: true,
         parsedContent: true,
+        parseStatus: true,
       },
       orderBy: {
         updatedAt: 'desc',
@@ -41,14 +42,16 @@ export async function GET(req: NextRequest) {
     // Transform the data to include parsing status
     const transformedUploads = uploads.map(upload => {
       // Check if parsedContent exists and has text content
-      const hasParsedContent = upload.parsedContent !== null && typeof upload.parsedContent === 'string';
+      const hasParsedContent = upload.parsedContent !== null && typeof upload.parsedContent === 'string' && upload.parsedContent.length > 0;
       
       // Remove the actual parsed content to reduce payload size
       const { parsedContent, ...uploadWithoutContent } = upload;
       
       return {
         ...uploadWithoutContent,
-        hasParsedContent
+        hasParsedContent,
+        isReady: upload.parseStatus === 'COMPLETED' && hasParsedContent,
+        isPending: upload.parseStatus === 'PENDING' || upload.parseStatus === 'PROCESSING',
       };
     });
 

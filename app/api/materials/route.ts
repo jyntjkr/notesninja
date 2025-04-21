@@ -5,8 +5,8 @@ import { prisma } from '@/lib/prisma';
 import { parsePdfFromUrl } from '@/utils/pdfParser';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 
-// Maximum time to allow for PDF parsing in serverless environment (15 seconds)
-const PDF_PARSE_TIMEOUT = 15000;
+// Long timeout for PDF parsing
+const PDF_PARSE_TIMEOUT = 60000; // 60 seconds
 
 export async function POST(request: Request) {
   console.log('POST /api/materials - Request received');
@@ -69,34 +69,11 @@ export async function POST(request: Request) {
       );
     }
 
-    // For PDF files, do the parsing upfront instead of in the background
-    // This ensures the parsing is completed before the function terminates
-    let parsedContent = null;
-    if (fileType === 'application/pdf' || fileUrl.toLowerCase().endsWith('.pdf')) {
-      console.log('Parsing PDF content for:', fileUrl);
-      try {
-        // Parse with timeout to avoid serverless function timeout
-        parsedContent = await parsePdfFromUrl(fileUrl, PDF_PARSE_TIMEOUT);
-        
-        if (parsedContent && parsedContent.length > 0) {
-          console.log('PDF parsed successfully, content length:', parsedContent.length);
-          
-          // Limit parsed content size to prevent database issues
-          const maxContentLength = 1000000; // 1MB limit
-          if (parsedContent.length > maxContentLength) {
-            console.log(`PDF content too large (${parsedContent.length} chars), truncating`);
-            parsedContent = parsedContent.substring(0, maxContentLength);
-          }
-        } else {
-          console.log('PDF parsing returned empty content');
-        }
-      } catch (parseError) {
-        console.error('Error parsing PDF:', parseError);
-        // Continue with upload even if parsing fails
-      }
-    }
+    // Determine if this is a PDF file
+    const isPdf = fileType === 'application/pdf' || fileUrl.toLowerCase().endsWith('.pdf');
+    const parseStatus = isPdf ? 'PENDING' : 'COMPLETED';
 
-    // Create upload record with parsed content if available
+    // Create upload record without parsed content initially
     try {
       console.log('Creating upload record in database');
       
@@ -111,7 +88,7 @@ export async function POST(request: Request) {
           fileName: fileName || '',
           fileSize: fileSize || 0,
           fileKey: fileKey || '',
-          parsedContent,
+          parseStatus,
           user: {
             connect: {
               id: session.user.id
@@ -122,27 +99,58 @@ export async function POST(request: Request) {
 
       console.log('Upload created successfully, id:', upload.id);
       
-      // Double-check if parsedContent was stored (debugging)
-      try {
-        const checkUpload = await prisma.upload.findUnique({
-          where: { id: upload.id },
-          select: { id: true, parsedContent: true }
-        });
+      // If this is a PDF, start background parsing process
+      if (isPdf) {
+        console.log('Starting background PDF parsing for:', upload.id);
         
-        console.log('Verified parsedContent stored:', 
-          checkUpload?.parsedContent ? 
-          `Yes (length: ${checkUpload.parsedContent.length})` : 
-          'No (null)'
-        );
-      } catch (checkError) {
-        console.error('Error verifying parsed content storage:', checkError);
+        // Process in background without blocking the response
+        (async () => {
+          try {
+            // Update status to PROCESSING
+            await prisma.upload.update({
+              where: { id: upload.id },
+              data: { parseStatus: 'PROCESSING' },
+            });
+            
+            console.log('Beginning PDF content extraction for:', upload.fileUrl);
+            const parsedContent = await parsePdfFromUrl(upload.fileUrl, PDF_PARSE_TIMEOUT);
+            
+            // Limit content size if needed
+            const maxContentLength = 1000000; // 1MB limit
+            const truncatedContent = parsedContent && parsedContent.length > maxContentLength 
+              ? parsedContent.substring(0, maxContentLength) 
+              : parsedContent;
+              
+            // Update with parsed content
+            await prisma.upload.update({
+              where: { id: upload.id },
+              data: { 
+                parsedContent: truncatedContent || '',
+                parseStatus: truncatedContent ? 'COMPLETED' : 'FAILED' 
+              },
+            });
+            
+            console.log('PDF parsing completed successfully for:', upload.id);
+          } catch (parseError) {
+            console.error('Error during PDF parsing:', parseError);
+            
+            // Update status to FAILED
+            await prisma.upload.update({
+              where: { id: upload.id },
+              data: { parseStatus: 'FAILED' },
+            });
+          }
+        })().catch(error => {
+          console.error('Unhandled error in background parsing:', error);
+        });
       }
       
       return NextResponse.json({
         success: true,
         message: 'Material uploaded successfully',
         uploadId: upload.id,
-        parsedContentLength: parsedContent ? parsedContent.length : 0
+        parseStatus,
+        isPdf
       });
     } catch (createError) {
       console.error('Error creating upload record:', createError);
