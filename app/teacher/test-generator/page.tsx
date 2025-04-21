@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import PageHeader from '@/components/shared/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
@@ -12,7 +12,7 @@ import { Separator } from '@/components/ui/separator';
 import { motion } from 'framer-motion';
 import { FlaskConical, Plus, Minus, FileText, FileCheck, Download, AlarmCheck, Loader2, FileDown, RefreshCw, AlertCircle, CheckCircle, CheckIcon, Pencil, Save } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { SimplePDFDownloadButton } from '@/components/test/SimplePDFRenderer';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -50,7 +50,16 @@ interface Material {
   isPending: boolean;
 }
 
-const TeacherTestGenerator = () => {
+// Create a client component that uses searchParams
+const TestGeneratorWithParams = () => {
+  const searchParams = useSearchParams();
+  const editId = searchParams.get('edit');
+  
+  return <TestGeneratorContent editId={editId} />;
+};
+
+// Main component that receives editId as prop
+const TestGeneratorContent = ({ editId }: { editId: string | null }) => {
   const [testTitle, setTestTitle] = useState('');
   const [testDescription, setTestDescription] = useState('');
   const [testSubject, setTestSubject] = useState('');
@@ -62,6 +71,10 @@ const TeacherTestGenerator = () => {
   const [isLoadingMaterials, setIsLoadingMaterials] = useState(false);
   const [isPdfLoading, setIsPdfLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [currentTestId, setCurrentTestId] = useState<string | null>(null);
+  const [isContentEditing, setIsContentEditing] = useState(false);
+  const [editableContent, setEditableContent] = useState('');
   
   const [questions, setQuestions] = useState([
     { type: 'mcq', quantity: 5, difficulty: 'medium' },
@@ -81,8 +94,54 @@ const TeacherTestGenerator = () => {
     } else {
       // Fetch materials
       fetchMaterials();
+      
+      // Check if we're in edit mode
+      if (editId) {
+        fetchTestForEditing(editId);
+      }
     }
-  }, [isAuthenticated, isTeacher, router]);
+  }, [isAuthenticated, isTeacher, router, editId]);
+
+  // Function to fetch a test for editing
+  const fetchTestForEditing = async (testId: string) => {
+    try {
+      const response = await fetch(`/api/tests/get-test?id=${testId}`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch test');
+      }
+
+      const data = await response.json();
+      
+      if (data.success && data.data.test) {
+        const test = data.data.test;
+        
+        // Set form data with test values
+        setTestTitle(test.title);
+        setTestDescription(test.description || '');
+        setTestSubject(test.subject || '');
+        setSelectedMaterial(test.materialId);
+        setGeneratedTest(test.content);
+        
+        // Parse and set questions from testConfig
+        if (test.testConfig && test.testConfig.questions) {
+          setQuestions(test.testConfig.questions);
+        }
+        
+        // Set editing state
+        setIsEditing(true);
+        setIsGenerated(true);
+        setCurrentTestId(testId);
+        
+        toast.success('Test loaded for editing');
+      } else {
+        throw new Error(data.error || 'Failed to load test');
+      }
+    } catch (error) {
+      console.error('Error fetching test for editing:', error);
+      toast.error('Failed to load test for editing. Please try again.');
+    }
+  };
 
   // Fetch materials from the API
   const fetchMaterials = async (): Promise<Material[]> => {
@@ -296,8 +355,8 @@ const TeacherTestGenerator = () => {
     }
   };
 
-  // Add function to save test to database
-  const handleSaveTest = async () => {
+  // Add function to handle test editing (updating)
+  const handleUpdateTest = async () => {
     // Validate required fields
     if (!testTitle) {
       toast.error('Please enter a test title');
@@ -309,14 +368,20 @@ const TeacherTestGenerator = () => {
       return;
     }
 
+    if (!currentTestId) {
+      toast.error('Test ID is missing');
+      return;
+    }
+
     setIsSaving(true);
     try {
-      const response = await fetch('/api/tests/save', {
-        method: 'POST',
+      const response = await fetch('/api/tests/update', {
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          id: currentTestId,
           title: testTitle,
           description: testDescription,
           subject: testSubject,
@@ -332,21 +397,99 @@ const TeacherTestGenerator = () => {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to save test');
+        throw new Error('Failed to update test');
       }
 
       const data = await response.json();
       
       if (data.success) {
-        toast.success('Test saved successfully!');
+        toast.success('Test updated successfully!');
       } else {
-        throw new Error(data.error || 'Failed to save test');
+        throw new Error(data.error || 'Failed to update test');
       }
     } catch (error) {
-      console.error('Error saving test:', error);
-      toast.error('Failed to save test. Please try again.');
+      console.error('Error updating test:', error);
+      toast.error('Failed to update test. Please try again.');
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  // Modify the handleSaveTest function to handle both saving and updating
+  const handleSaveTest = async () => {
+    if (isEditing && currentTestId) {
+      await handleUpdateTest();
+    } else {
+      // Original save functionality
+      // Validate required fields
+      if (!testTitle) {
+        toast.error('Please enter a test title');
+        return;
+      }
+
+      if (!selectedMaterial) {
+        toast.error('Please select a source material');
+        return;
+      }
+
+      setIsSaving(true);
+      try {
+        const response = await fetch('/api/tests/save', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            title: testTitle,
+            description: testDescription,
+            subject: testSubject,
+            content: generatedTest,
+            testConfig: {
+              testTitle,
+              testSubject,
+              testDescription,
+              questions,
+            },
+            materialId: selectedMaterial,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to save test');
+        }
+
+        const data = await response.json();
+        
+        if (data.success) {
+          toast.success('Test saved successfully!');
+          // Set the current test ID for future updates
+          if (data.data.test && data.data.test.id) {
+            setCurrentTestId(data.data.test.id);
+            setIsEditing(true);
+          }
+        } else {
+          throw new Error(data.error || 'Failed to save test');
+        }
+      } catch (error) {
+        console.error('Error saving test:', error);
+        toast.error('Failed to save test. Please try again.');
+      } finally {
+        setIsSaving(false);
+      }
+    }
+  };
+
+  // Add function to handle content editing
+  const toggleContentEditing = () => {
+    if (isContentEditing) {
+      // Save the edited content
+      setGeneratedTest(editableContent);
+      setIsContentEditing(false);
+      toast.success('Content updated!');
+    } else {
+      // Enable editing mode
+      setEditableContent(generatedTest);
+      setIsContentEditing(true);
     }
   };
 
@@ -362,8 +505,8 @@ const TeacherTestGenerator = () => {
   return (
     <>
       <PageHeader 
-        title="Test Generator" 
-        description="Create AI-generated tests and exams based on your uploaded materials."
+        title={isEditing ? "Edit Test" : "Test Generator"} 
+        description={isEditing ? "Edit your existing test" : "Create AI-generated tests and exams based on your uploaded materials."}
       />
       
       <div className="grid md:grid-cols-5 gap-6">
@@ -667,10 +810,10 @@ const TeacherTestGenerator = () => {
                       <Button 
                         variant="outline" 
                         size="sm"
-                        onClick={() => toast.info('Edit functionality will be implemented soon')}
+                        onClick={toggleContentEditing}
                       >
                         <Pencil className="h-4 w-4 mr-2" />
-                        Edit
+                        {isContentEditing ? 'Save Content' : 'Edit Content'}
                       </Button>
                       <Button 
                         variant="outline" 
@@ -681,12 +824,12 @@ const TeacherTestGenerator = () => {
                         {isSaving ? (
                           <>
                             <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            Saving...
+                            {isEditing ? 'Updating...' : 'Saving...'}
                           </>
                         ) : (
                           <>
                             <Save className="h-4 w-4 mr-2" />
-                            Save
+                            {isEditing ? 'Update' : 'Save'}
                           </>
                         )}
                       </Button>
@@ -734,7 +877,16 @@ const TeacherTestGenerator = () => {
                       {testDescription && <p className="text-sm italic text-center">{testDescription}</p>}
                       
                       <div className="mt-4 prose-sm max-h-[600px] overflow-y-auto p-2">
-                        <pre className="text-sm whitespace-pre-wrap">{generatedTest}</pre>
+                        {isContentEditing ? (
+                          <Textarea
+                            value={editableContent}
+                            onChange={(e) => setEditableContent(e.target.value)}
+                            className="min-h-[400px] font-mono"
+                            placeholder="Edit test content here..."
+                          />
+                        ) : (
+                          <pre className="text-sm whitespace-pre-wrap">{generatedTest}</pre>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -770,6 +922,15 @@ const TeacherTestGenerator = () => {
         </div>
       )}
     </>
+  );
+};
+
+// Main component with Suspense
+const TeacherTestGenerator = () => {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <TestGeneratorWithParams />
+    </Suspense>
   );
 };
 

@@ -17,6 +17,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
+import { SimplePDFDownloadButton } from '@/components/test/SimplePDFRenderer';
 
 // Define types for tests
 interface Test {
@@ -39,6 +40,7 @@ const TeacherTests = () => {
   const [shareUrl, setShareUrl] = useState('https://smartnote.companion/test/2438abcd');
   const [tests, setTests] = useState<Test[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [pdfLoading, setPdfLoading] = useState<{ [key: string]: boolean }>({});
 
   // Authentication check
   const { isAuthenticated, isTeacher } = useAuth();
@@ -101,6 +103,10 @@ const TeacherTests = () => {
 
   const handleCreateNewTest = () => {
     router.push('/teacher/test-generator');
+  };
+
+  const getPdfFileName = (test: Test) => {
+    return `${test.title.replace(/\s+/g, '_').toLowerCase()}_test.pdf`;
   };
 
   return (
@@ -192,18 +198,47 @@ const TeacherTests = () => {
                             <Button 
                               variant="outline" 
                               size="sm"
-                              onClick={() => router.push(`/teacher/test-generator?edit=${test.id}`)}
+                              onClick={() => router.push(`/teacher/tests/${test.id}/edit`)}
                             >
                               <Pencil className="h-4 w-4 mr-2" />
                               Edit
                             </Button>
-                            <Button 
-                              variant="outline" 
-                              size="sm"
+                            <SimplePDFDownloadButton
+                              title={test.title}
+                              description={test.description || ''}
+                              content={test.content}
+                              fileName={getPdfFileName(test)}
+                              onStart={() => {
+                                setPdfLoading(prev => ({ ...prev, [test.id]: true }));
+                                toast.info('Preparing PDF for download...');
+                              }}
+                              onComplete={(success) => {
+                                setPdfLoading(prev => ({ ...prev, [test.id]: false }));
+                                if (success) {
+                                  toast.success('PDF downloaded successfully!');
+                                } else {
+                                  toast.error('Failed to download PDF. Please try again.');
+                                }
+                              }}
                             >
-                              <Download className="h-4 w-4 mr-2" />
-                              Download
-                            </Button>
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                disabled={pdfLoading[test.id]}
+                              >
+                                {pdfLoading[test.id] ? (
+                                  <>
+                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                    Preparing...
+                                  </>
+                                ) : (
+                                  <>
+                                    <Download className="h-4 w-4 mr-2" />
+                                    Download
+                                  </>
+                                )}
+                              </Button>
+                            </SimplePDFDownloadButton>
                           </div>
                         </div>
                         
