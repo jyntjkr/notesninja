@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { motion } from 'framer-motion';
-import { FlaskConical, Plus, Minus, FileText, FileCheck, Download, AlarmCheck, Loader2, FileDown, RefreshCw, AlertCircle, CheckCircle, CheckIcon } from 'lucide-react';
+import { FlaskConical, Plus, Minus, FileText, FileCheck, Download, AlarmCheck, Loader2, FileDown, RefreshCw, AlertCircle, CheckCircle, CheckIcon, Pencil, Save } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
@@ -61,6 +61,7 @@ const TeacherTestGenerator = () => {
   const [materials, setMaterials] = useState<Material[]>([]);
   const [isLoadingMaterials, setIsLoadingMaterials] = useState(false);
   const [isPdfLoading, setIsPdfLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   
   const [questions, setQuestions] = useState([
     { type: 'mcq', quantity: 5, difficulty: 'medium' },
@@ -292,6 +293,60 @@ const TeacherTestGenerator = () => {
     } catch (error) {
       console.error("Error retrying PDF parsing:", error);
       toast.error("Failed to start PDF parsing");
+    }
+  };
+
+  // Add function to save test to database
+  const handleSaveTest = async () => {
+    // Validate required fields
+    if (!testTitle) {
+      toast.error('Please enter a test title');
+      return;
+    }
+
+    if (!selectedMaterial) {
+      toast.error('Please select a source material');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const response = await fetch('/api/tests/save', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          title: testTitle,
+          description: testDescription,
+          subject: testSubject,
+          content: generatedTest,
+          testConfig: {
+            testTitle,
+            testSubject,
+            testDescription,
+            questions,
+          },
+          materialId: selectedMaterial,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save test');
+      }
+
+      const data = await response.json();
+      
+      if (data.success) {
+        toast.success('Test saved successfully!');
+      } else {
+        throw new Error(data.error || 'Failed to save test');
+      }
+    } catch (error) {
+      console.error('Error saving test:', error);
+      toast.error('Failed to save test. Please try again.');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -609,6 +664,32 @@ const TeacherTestGenerator = () => {
                 <div className="space-y-4">
                   <div className="border rounded-md p-4 relative bg-card">
                     <div className="flex justify-end gap-2 mb-4">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => toast.info('Edit functionality will be implemented soon')}
+                      >
+                        <Pencil className="h-4 w-4 mr-2" />
+                        Edit
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        disabled={isSaving}
+                        onClick={handleSaveTest}
+                      >
+                        {isSaving ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Saving...
+                          </>
+                        ) : (
+                          <>
+                            <Save className="h-4 w-4 mr-2" />
+                            Save
+                          </>
+                        )}
+                      </Button>
                       <SimplePDFDownloadButton
                         title={testTitle}
                         description={testDescription}
