@@ -1,4 +1,6 @@
-import pdfParse from 'pdf-parse';
+// Import only the core pdf.js module from pdf-parse to avoid test files
+import * as fs from 'fs';
+import * as path from 'path';
 
 interface PDFParseResult {
   text: string;
@@ -26,11 +28,7 @@ interface PDFParserOptions {
 }
 
 /**
- * Parses a PDF file from a URL with timeout and error handling
- * @param fileUrl The URL of the PDF file
- * @param timeoutMs Timeout in milliseconds
- * @param options Additional parsing options
- * @returns The extracted text or empty string on failure
+ * Custom PDF parsing implementation that avoids the test file dependency
  */
 export async function parsePdfFromUrl(
   fileUrl: string,
@@ -58,11 +56,12 @@ export async function parsePdfFromUrl(
     
     console.log(`[PDF Parser] PDF fetched successfully, size: ${buffer.length} bytes`);
     
+    // Use a dynamic import to load pdf-parse only when needed
+    // This helps avoid problems with the test file
+    const { default: pdfParse } = await import('pdf-parse/lib/pdf-parse.js');
+    
     // Configure PDF parse options
-    const parseOptions: any = {
-      // Set dataDir to null to prevent looking for test files
-      dataDir: null
-    };
+    const parseOptions: any = {};
     
     // Limit to specific page range if maxPages is specified
     if (options?.maxPages) {
@@ -76,12 +75,12 @@ export async function parsePdfFromUrl(
     
     // Create parsing timeout
     const parsePromise = pdfParse(buffer, parseOptions);
-    const timeoutPromise = new Promise((_, reject) => {
+    const timeoutPromise = new Promise<PDFParseResult>((_, reject) => {
       setTimeout(() => reject(new Error('PDF parsing timed out')), parseTimeout);
     });
     
     // Race parsing against timeout
-    const result = await Promise.race([parsePromise, timeoutPromise]) as PDFParseResult;
+    const result = await Promise.race([parsePromise, timeoutPromise]);
     clearTimeout(timeoutId);
     
     if (!result || !result.text) {

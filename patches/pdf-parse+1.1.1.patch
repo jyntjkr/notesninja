@@ -1,0 +1,72 @@
+diff --git a/node_modules/pdf-parse/index.js b/node_modules/pdf-parse/index.js
+index e9fc367..3adb524 100644
+--- a/node_modules/pdf-parse/index.js
++++ b/node_modules/pdf-parse/index.js
+@@ -11,16 +11,24 @@ let isDebugMode = !module.parent;
+ //for testing purpose
+ if (isDebugMode) {
+ 
+-    let PDF_FILE = './test/data/05-versions-space.pdf';
+-    let dataBuffer = Fs.readFileSync(PDF_FILE);
+-    Pdf(dataBuffer).then(function(data) {
+-        Fs.writeFileSync(`${PDF_FILE}.txt`, data.text, {
+-            encoding: 'utf8',
+-            flag: 'w'
+-        });
+-        debugger;
+-    }).catch(function(err) {
+-        debugger;
+-    });
++    let PDF_VERSION = pdf.version;
++    let PDF_VERSION_CONFIDENCE = 'official';
++    
++    // Use an empty buffer instead of a file to avoid ENOENT errors
++    let PDF_DATA = Buffer.from([]);
++
++    /*
++    params can be a buffer or file path or url.
++    */
++    //console.log('node-pdf-parse v' + PDF_VERSION);
++    params; //can be noised with custom properties!
++    if (!params || !((params instanceof Buffer) || typeof params === 'string')) {
++        console.log('THROW: Invalid input, parameter must be a path(file/url) or Buffer.');
++        return parsePDF(PDF_DATA)//precalculated
++            .then(function (data) {
++                data.version = PDF_VERSION;
++                return data;
++            });
++    }
+ 
+ }
+diff --git a/node_modules/pdf-parse/index.js.backup b/node_modules/pdf-parse/index.js.backup
+new file mode 100644
+index 0000000..e9fc367
+--- /dev/null
++++ b/node_modules/pdf-parse/index.js.backup
+@@ -0,0 +1,26 @@
++const Fs = require('fs');
++const Pdf = require('./lib/pdf-parse.js');
++
++module.exports = Pdf;
++
++let isDebugMode = !module.parent; 
++
++//process.env.AUTO_KENT_DEBUG
++
++
++//for testing purpose
++if (isDebugMode) {
++
++    let PDF_FILE = './test/data/05-versions-space.pdf';
++    let dataBuffer = Fs.readFileSync(PDF_FILE);
++    Pdf(dataBuffer).then(function(data) {
++        Fs.writeFileSync(`${PDF_FILE}.txt`, data.text, {
++            encoding: 'utf8',
++            flag: 'w'
++        });
++        debugger;
++    }).catch(function(err) {
++        debugger;
++    });
++
++}
