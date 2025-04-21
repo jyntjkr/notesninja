@@ -111,6 +111,42 @@
   @apply transition-transform duration-200 hover:scale-105;
 }
 
+.gradient-border {
+  position: relative;
+  background: white;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  background-clip: padding-box;
+}
+
+.gradient-border::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: -1;
+  margin: -1px;
+  border-radius: inherit;
+  background: linear-gradient(
+    to bottom right,
+    rgba(59, 130, 246, 0.6),
+    rgba(219, 39, 119, 0.6),
+    rgba(16, 185, 129, 0.6)
+  );
+  animation: rotate 4s linear infinite;
+}
+
+@keyframes rotate {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.dark .gradient-border {
+  background: hsl(222.2 84% 4.9%);
+}
+
 @theme inline {
 
   --radius-sm: calc(var(--radius) - 4px);
