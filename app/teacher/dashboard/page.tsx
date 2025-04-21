@@ -123,16 +123,23 @@ export default function TeacherDashboard() {
 
   return (
     <>
-      <div className="flex justify-between items-center mb-6">
+      <div className="md:flex md:justify-between md:items-center mb-6">
         <PageHeader 
           title="Teacher Dashboard" 
           description="Welcome back! Here's an overview of your materials and student engagement."
         />
-        <div className="text-sm text-muted-foreground flex items-center">
+        <div className="hidden md:flex text-sm text-muted-foreground items-center mt-1">
           <Clock className="h-4 w-4 mr-1" />
           Last updated: Today at {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
         </div>
       </div>
+      
+      {materialCount === 0 && (
+        <div className="bg-muted/50 rounded-lg p-4 mb-6 text-sm flex items-start md:items-center">
+          <AlertCircle className="h-5 w-5 md:h-4 md:w-4 mr-2 text-primary mt-0.5 md:mt-0 flex-shrink-0" />
+          <span>Get started by uploading your first teaching material to enable AI-powered test generation.</span>
+        </div>
+      )}
       
       <div className="grid gap-6 md:grid-cols-2">
         {/* Left column with metric cards and materials */}
@@ -149,7 +156,7 @@ export default function TeacherDashboard() {
                 title="Total Materials"
                 value={String(materialCount || 0)}
                 icon={<FileText className="h-4 w-4" />}
-                description={materialCount === 0 ? "Upload your first material" : ""}
+                description=""
               />
             </motion.div>
             
@@ -369,6 +376,12 @@ export default function TeacherDashboard() {
             </div>
           </CardContent>
         </Card>
+      </div>
+      
+      {/* Last updated line for mobile */}
+      <div className="md:hidden text-sm text-muted-foreground flex items-center justify-center mt-8 mb-4">
+        <Clock className="h-4 w-4 mr-1" />
+        Last updated: Today at {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
       </div>
     </>
   );
