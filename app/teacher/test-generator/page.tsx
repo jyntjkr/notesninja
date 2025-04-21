@@ -150,11 +150,21 @@ const TeacherTestGenerator = () => {
         }),
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to generate test');
-      }
-
       const data = await response.json();
+      
+      if (!response.ok) {
+        // Handle specific error cases
+        if (data.code === 'CONTENT_NOT_PARSED') {
+          toast.error('This material has not been processed yet. Please wait a moment and try again, or select a different material.');
+          
+          // Show a more informative message to the user
+          toast.info('Materials are processed in the background after upload. This may take a few moments depending on the file size.');
+        } else {
+          // General error handling
+          throw new Error(data.error || 'Failed to generate test');
+        }
+        return;
+      }
       
       if (data.success && data.data.test) {
         setGeneratedTest(data.data.test);
@@ -165,7 +175,7 @@ const TeacherTestGenerator = () => {
       }
     } catch (error) {
       console.error('Error generating test:', error);
-      toast.error('Failed to generate test. Please try again.');
+      toast.error(error instanceof Error ? error.message : 'Failed to generate test. Please try again.');
     } finally {
       setIsGenerating(false);
     }
