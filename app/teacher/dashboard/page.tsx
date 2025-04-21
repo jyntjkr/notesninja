@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { FileText, Users, Clipboard, GraduationCap, Clock, Download, CheckCircle, AlertCircle } from 'lucide-react';
+import { FileText, Users, Clipboard, GraduationCap, Clock, Download, CheckCircle, AlertCircle, Calendar, Pencil, Eye } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Icons } from '@/components/shared/icons';
 import { toast } from 'sonner';
@@ -33,6 +33,17 @@ interface Material {
   hasParsedContent?: boolean;
 }
 
+// Define interface for test
+interface Test {
+  id: string;
+  title: string;
+  description?: string;
+  subject: string;
+  content: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export default function TeacherDashboard() {
   // Authentication check
   const { isAuthenticated, isTeacher, status, roleConfirmed } = useAuth();
@@ -41,6 +52,9 @@ export default function TeacherDashboard() {
   const [materials, setMaterials] = useState<Material[]>([]);
   const [materialsLoading, setMaterialsLoading] = useState(false);
   const [materialCount, setMaterialCount] = useState(0);
+  const [tests, setTests] = useState<Test[]>([]);
+  const [testsLoading, setTestsLoading] = useState(false);
+  const [testCount, setTestCount] = useState(0);
   
   // Fetch materials
   const fetchMaterials = async () => {
@@ -65,6 +79,33 @@ export default function TeacherDashboard() {
     }
   };
   
+  // Fetch tests
+  const fetchTests = async () => {
+    try {
+      setTestsLoading(true);
+      const response = await fetch('/api/tests/get-tests');
+      if (!response.ok) {
+        throw new Error('Failed to fetch tests');
+      }
+      const data = await response.json();
+      
+      if (data.success && data.data.tests) {
+        const testsData = data.data.tests;
+        setTests(testsData.slice(0, 3)); // Get only the top 3 tests
+        setTestCount(testsData.length);
+      } else {
+        throw new Error('Failed to fetch tests');
+      }
+    } catch (error) {
+      console.error('Error fetching tests:', error);
+      toast.error('Failed to fetch your tests');
+      // Set empty array on error
+      setTests([]);
+    } finally {
+      setTestsLoading(false);
+    }
+  };
+  
   React.useEffect(() => {
     // Only run redirects after the session has loaded
     if (status !== "loading") {
@@ -77,8 +118,9 @@ export default function TeacherDashboard() {
       } else if (!isTeacher) {
         router.push('/student/dashboard');
       } else {
-        // Fetch materials when authenticated
+        // Fetch materials and tests when authenticated
         fetchMaterials();
+        fetchTests();
       }
     }
   }, [isAuthenticated, isTeacher, roleConfirmed, router, status]);
@@ -107,6 +149,12 @@ export default function TeacherDashboard() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  // Format date for display
+  const formatDate = (dateString: string): string => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   };
 
   // Don't render until authenticated and session is loaded
@@ -163,7 +211,7 @@ export default function TeacherDashboard() {
             <motion.div variants={item}>
               <MetricCard
                 title="Tests Created"
-                value="0"
+                value={String(testCount || 0)}
                 icon={<Clipboard className="h-4 w-4" />}
                 description=""
               />
@@ -368,12 +416,77 @@ export default function TeacherDashboard() {
             <CardTitle>Recent Tests</CardTitle>
           </CardHeader>
           <CardContent className="pb-2">
-            <div className="flex flex-col items-center justify-center text-center p-4">
-              <Clipboard className="h-8 w-8 text-muted-foreground mb-3" />
-              <h3 className="text-base font-medium mb-2">No tests created yet</h3>
-              <p className="text-sm text-muted-foreground mb-3">Start by creating your first test for students</p>
-              <Button size="sm" onClick={() => router.push('/teacher/test-generator')}>Create New Test</Button>
-            </div>
+            {testsLoading ? (
+              <div className="flex items-center justify-center p-8">
+                <Icons.spinner className="h-6 w-6 animate-spin" />
+              </div>
+            ) : !tests || tests.length === 0 ? (
+              <div className="flex flex-col items-center justify-center text-center p-4">
+                <Clipboard className="h-8 w-8 text-muted-foreground mb-3" />
+                <h3 className="text-base font-medium mb-2">No tests created yet</h3>
+                <p className="text-sm text-muted-foreground mb-3">Start by creating your first test for students</p>
+                <Button size="sm" onClick={() => router.push('/teacher/test-generator')}>Create New Test</Button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {tests.map((test, index) => (
+                  <motion.div
+                    key={test.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                  >
+                    <div className="border rounded-md p-3 hover:bg-muted/50 transition-colors">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h3 className="font-medium text-base">{test.title}</h3>
+                          <div className="flex items-center text-sm text-muted-foreground mt-1">
+                            <Calendar className="h-3.5 w-3.5 mr-1" />
+                            <span>{formatDate(test.createdAt)}</span>
+                          </div>
+                        </div>
+                        <div className="flex gap-1">
+                          <Button 
+                            size="icon" 
+                            variant="ghost" 
+                            className="h-7 w-7" 
+                            title="View Test"
+                            onClick={() => router.push(`/teacher/tests/${test.id}`)}
+                          >
+                            <Eye className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button 
+                            size="icon" 
+                            variant="ghost" 
+                            className="h-7 w-7" 
+                            title="Edit Test"
+                            onClick={() => router.push(`/teacher/tests/${test.id}/edit`)}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="mt-2">
+                        {test.subject && (
+                          <span className="inline-block text-xs bg-secondary px-2 py-0.5 rounded-full mr-2">
+                            {test.subject}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+                <div className="pt-2 text-center">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => router.push('/teacher/tests')}
+                  >
+                    View All Tests
+                  </Button>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
