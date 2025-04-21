@@ -191,21 +191,38 @@ const TeacherTestGenerator = () => {
         }),
       });
 
-      const data = await response.json();
-      
+      // Check for timeout or network error
       if (!response.ok) {
+        // Try to parse the JSON response
+        let errorData;
+        try {
+          errorData = await response.json();
+        } catch (jsonError) {
+          // If we can't parse JSON, it might be a gateway timeout or network error
+          if (response.status === 504) {
+            throw new Error('The test generation timed out. This PDF is too large or complex. Try using a smaller document or fewer questions.');
+          } else {
+            throw new Error(`Request failed with status: ${response.status}`);
+          }
+        }
+        
         // Handle specific error cases
-        if (data.code === 'CONTENT_NOT_PARSED') {
+        if (errorData.code === 'CONTENT_NOT_PARSED') {
           toast.error('This material has not been processed yet. Please wait a moment and try again, or select a different material.');
           
           // Show a more informative message to the user
           toast.info('Materials are processed in the background after upload. This may take a few moments depending on the file size.');
+        } else if (errorData.code === 'GENERATION_TIMEOUT') {
+          toast.error('The test generation timed out. This PDF is too large or complex.');
+          toast.info('Try using a smaller document or reducing the number of questions.');
         } else {
           // General error handling
-          throw new Error(data.error || 'Failed to generate test');
+          throw new Error(errorData.error || 'Failed to generate test');
         }
         return;
       }
+      
+      const data = await response.json();
       
       if (data.success && data.data.test) {
         setGeneratedTest(data.data.test);

@@ -4,8 +4,9 @@ import { authOptions } from '@/lib/auth-options';
 import { prisma } from '@/lib/prisma';
 import { generateTest, TestConfig } from '@/utils/geminiAi';
 
-// Maximum time to allow for PDF parsing in serverless environment (20 seconds)
-const PDF_PARSE_TIMEOUT = 20000;
+// Enable streaming API response for this route
+export const dynamic = 'force-dynamic';
+export const maxDuration = 60; // Set maximum timeout to 60 seconds
 
 export async function POST(req: NextRequest) {
   try {
@@ -26,6 +27,13 @@ export async function POST(req: NextRequest) {
     // Get the material from the database
     const material = await prisma.upload.findUnique({
       where: { id: materialId },
+      select: {
+        id: true,
+        title: true,
+        fileUrl: true,
+        parsedContent: true,
+        parseStatus: true,
+      }
     });
 
     if (!material) {
@@ -61,6 +69,19 @@ export async function POST(req: NextRequest) {
       });
     } catch (genError) {
       console.error('Error generating test:', genError);
+      
+      // Check if it's a timeout error
+      const errorMessage = genError instanceof Error ? genError.message : String(genError);
+      if (errorMessage.includes('timeout') || errorMessage.includes('timed out')) {
+        return new Response(
+          JSON.stringify({ 
+            error: 'The test generation timed out due to large content. Try using a shorter or less complex material.',
+            code: 'GENERATION_TIMEOUT' 
+          }), 
+          { status: 504, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+      
       return NextResponse.json({ 
         error: 'Failed to generate test. The AI service may be temporarily unavailable or the content may not be suitable.' 
       }, { status: 500 });
@@ -69,6 +90,7 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error('Error in test generation process:', error);
     const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+    
     return NextResponse.json(
       { error: 'An error occurred while generating the test', message: errorMessage }, 
       { status: 500 }
