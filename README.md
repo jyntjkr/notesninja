@@ -53,7 +53,7 @@ NoteNinja is a comprehensive educational platform designed to help teachers crea
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/noteninja.git
+   git clone https://github.com/jyntjkr/noteninja.git
    cd noteninja
    ```
 
