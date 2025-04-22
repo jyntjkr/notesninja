@@ -15,9 +15,12 @@ import { useAuth } from '@/hooks/use-auth';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { SimplePDFDownloadButton } from '@/components/test/SimplePDFRenderer';
+import { EnhancedPDFDownloadButton } from '@/components/test/EnhancedPDFRenderer';
+import { SimplerPDFDownloadButton } from '@/components/test/SimplerPDFRenderer';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { FormControl } from '@/components/ui/form';
 import { Checkbox } from '@/components/ui/checkbox';
+import TestPreview from '@/components/test/TestPreview';
 
 // Interface for upload data
 interface Upload {
@@ -833,7 +836,7 @@ const TestGeneratorContent = ({ editId }: { editId: string | null }) => {
                           </>
                         )}
                       </Button>
-                      <SimplePDFDownloadButton
+                      <SimplerPDFDownloadButton
                         title={testTitle}
                         description={testDescription}
                         content={generatedTest}
@@ -869,7 +872,7 @@ const TestGeneratorContent = ({ editId }: { editId: string | null }) => {
                             </>
                           )}
                         </Button>
-                      </SimplePDFDownloadButton>
+                      </SimplerPDFDownloadButton>
                     </div>
                     
                     <div className="space-y-4">
@@ -878,14 +881,19 @@ const TestGeneratorContent = ({ editId }: { editId: string | null }) => {
                       
                       <div className="mt-4 prose-sm max-h-[600px] overflow-y-auto p-2">
                         {isContentEditing ? (
-                          <Textarea
-                            value={editableContent}
-                            onChange={(e) => setEditableContent(e.target.value)}
-                            className="min-h-[400px] font-mono"
-                            placeholder="Edit test content here..."
-                          />
+                          <div className="space-y-4">
+                            <Textarea
+                              value={editableContent}
+                              onChange={(e) => setEditableContent(e.target.value)}
+                              className="font-mono text-sm h-[600px]"
+                            />
+                          </div>
                         ) : (
-                          <pre className="text-sm whitespace-pre-wrap">{generatedTest}</pre>
+                          <TestPreview 
+                            content={generatedTest} 
+                            hideAnswers={false}
+                            className="border-0 shadow-none" 
+                          />
                         )}
                       </div>
                     </div>

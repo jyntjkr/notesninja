@@ -10,6 +10,9 @@ import { toast } from 'sonner';
 import { useAuth } from '@/hooks/use-auth';
 import { Loader2, ArrowLeft, Calendar, Pencil, Download, FileText } from 'lucide-react';
 import { SimplePDFDownloadButton } from '@/components/test/SimplePDFRenderer';
+import { EnhancedPDFDownloadButton } from '@/components/test/EnhancedPDFRenderer';
+import { SimplerPDFDownloadButton } from '@/components/test/SimplerPDFRenderer';
+import TestPreview from '@/components/test/TestPreview';
 
 interface Test {
   id: string;
@@ -120,7 +123,7 @@ const TestViewPage = () => {
                     <Pencil className="h-4 w-4 mr-2" />
                     Edit
                   </Button>
-                  <SimplePDFDownloadButton
+                  <SimplerPDFDownloadButton
                     title={test.title}
                     description={test.description || ''}
                     content={test.content}
@@ -155,7 +158,7 @@ const TestViewPage = () => {
                         </>
                       )}
                     </Button>
-                  </SimplePDFDownloadButton>
+                  </SimplerPDFDownloadButton>
                 </div>
               </div>
               <div className="flex flex-wrap gap-2 mt-4">
@@ -171,7 +174,10 @@ const TestViewPage = () => {
             <CardContent>
               <div className="border rounded-md p-4 bg-muted/30">
                 <div className="prose-sm max-h-[600px] overflow-y-auto p-2">
-                  <pre className="text-sm whitespace-pre-wrap">{test.content}</pre>
+                  <TestPreview 
+                    content={test.content} 
+                    className="border-0 shadow-none"
+                  />
                 </div>
               </div>
             </CardContent>

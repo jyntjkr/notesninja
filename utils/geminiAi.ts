@@ -1,4 +1,5 @@
 import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from '@google/generative-ai';
+import { generateTestPromptTemplate, formatTestContent } from './testTemplates';
 
 // Initialize the Gemini API with your API key
 const apiKey = process.env.GEMINI_API_KEY || '';
@@ -119,11 +120,6 @@ export async function generateTest(content: string, config: TestConfig): Promise
       safetySettings,
     });
 
-    // Create a context for the questions
-    const questionConfig = config.questions.map(q => 
-      `${q.quantity} ${q.difficulty} ${q.type} questions`
-    ).join(', ');
-
     // Limit content length to avoid exceeding API limits and timeout
     // Use a smaller limit for better reliability with serverless functions
     const maxContentLength = 20000; // Reduced from 30000 to improve reliability
@@ -134,26 +130,8 @@ export async function generateTest(content: string, config: TestConfig): Promise
 
     console.log(`Original content length: ${content.length}, Processed content length: ${processedContent.length}`);
 
-    // Create the prompt
-    const prompt = `
-    You are an expert educational test creator. Create a comprehensive test based on the following educational content:
-    
-    ${processedContent} ${contentTruncated ? '...(content summarized from a larger document)' : ''}
-    
-    Test Title: ${config.testTitle}
-    Subject: ${config.testSubject}
-    ${config.testDescription ? `Description: ${config.testDescription}` : ''}
-    
-    Please include the following questions:
-    ${questionConfig}
-    
-    Format the test professionally with clear sections, question numbering, and answer keys (where applicable).
-    For multiple choice questions, include 4 options (A, B, C, D) with one correct answer.
-    For short answer questions, provide expected answers.
-    For long answer questions, provide evaluation criteria or key points that should be addressed.
-    
-    The output should be formatted in markdown for clean presentation.
-    `;
+    // Use the new template system to create a structured prompt
+    const prompt = generateTestPromptTemplate(processedContent, config, contentTruncated);
 
     // Set timeout to prevent hanging serverless functions
     const timeoutMs = 25000; // 25 seconds max for AI processing
@@ -167,11 +145,14 @@ export async function generateTest(content: string, config: TestConfig): Promise
       .then(response => response.text());
     
     // Race against timeout
-    const text = await Promise.race([generationPromise, timeoutPromise]);
+    let text = await Promise.race([generationPromise, timeoutPromise]);
     
     if (!text || text.trim() === '') {
       throw new Error('AI generated empty response');
     }
+    
+    // Post-process the generated content for consistent formatting
+    text = formatTestContent(text);
     
     return text;
   } catch (error) {
