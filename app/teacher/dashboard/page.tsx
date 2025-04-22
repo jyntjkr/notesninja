@@ -440,9 +440,14 @@ export default function TeacherDashboard() {
                       <div className="flex justify-between items-start">
                         <div>
                           <h3 className="font-medium text-base">{test.title}</h3>
-                          <div className="flex items-center text-sm text-muted-foreground mt-1">
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
                             <Calendar className="h-3.5 w-3.5 mr-1" />
                             <span>{formatDate(test.createdAt)}</span>
+                            {test.subject && (
+                              <span className="inline-flex px-2 py-0.5 rounded-full text-xs bg-secondary">
+                                {test.subject}
+                              </span>
+                            )}
                           </div>
                         </div>
                         <div className="flex gap-1">
@@ -467,11 +472,7 @@ export default function TeacherDashboard() {
                         </div>
                       </div>
                       <div className="mt-2">
-                        {test.subject && (
-                          <span className="inline-block text-xs bg-secondary px-2 py-0.5 rounded-full mr-2">
-                            {test.subject}
-                          </span>
-                        )}
+                        {/* Subject tag moved up to be with date */}
                       </div>
                     </div>
                   </motion.div>
